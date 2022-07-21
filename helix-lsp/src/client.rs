@@ -295,6 +295,9 @@ impl Client {
                     }),
                     workspace_folders: Some(true),
                     apply_edit: Some(true),
+                    execute_command: Some(lsp::DynamicRegistrationClientCapabilities {
+                        dynamic_registration: Some(false),
+                    }),
                     ..Default::default()
                 }),
                 text_document: Some(lsp::TextDocumentClientCapabilities {

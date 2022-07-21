@@ -497,6 +497,42 @@ pub fn code_action(cx: &mut Context) {
         },
     )
 }
+
+impl ui::menu::Item for lsp::Command {
+    type Data = ();
+    fn label(&self, _data: &Self::Data) -> Spans {
+        self.title.as_str().into()
+    }
+}
+
+pub fn workspace_command_picker(cx: &mut Context) {
+    let (_, doc) = current!(cx.editor);
+
+    let language_server = language_server!(cx.editor, doc);
+
+    let execute_command_provider = match &language_server.capabilities().execute_command_provider {
+        Some(p) => p,
+        None => return,
+    };
+    let commands = execute_command_provider
+        .commands
+        .iter()
+        .map(|command| lsp::Command {
+            title: command.clone(),
+            command: command.clone(),
+            arguments: None,
+        })
+        .collect::<Vec<_>>();
+    cx.callback = Some(Box::new(
+        move |compositor: &mut Compositor, _cx: &mut compositor::Context| {
+            let picker = ui::Picker::new(commands, (), move |cx, command, _action| {
+                execute_lsp_command(cx.editor, command.clone());
+            });
+            compositor.push(Box::new(overlayed(picker)))
+        },
+    ));
+}
+
 pub fn execute_lsp_command(editor: &mut Editor, cmd: lsp::Command) {
     let doc = doc!(editor);
     let language_server = language_server!(editor, doc);
