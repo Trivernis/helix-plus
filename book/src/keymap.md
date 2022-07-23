@@ -238,6 +238,7 @@ This layer is a kludge of mappings, mostly pickers.
 | -----   | -----------                                                             | -------                             |
 | `f`     | Open file picker                                                        | `file_picker`                       |
 | `b`     | Open buffer picker                                                      | `buffer_picker`                     |
+| `j`     | Open jumplist picker                                                    | `jumplist_picker`                   |
 | `k`     | Show documentation for item under cursor in a [popup](#popup) (**LSP**) | `hover`                             |
 | `s`     | Open document symbol picker (**LSP**)                                   | `symbol_picker`                     |
 | `S`     | Open workspace symbol picker (**LSP**)                                  | `workspace_symbol_picker`           |
@@ -354,6 +355,7 @@ Keys to use within picker. Remapping currently not supported.
 | `Enter`                      | Open selected     |
 | `Ctrl-s`                     | Open horizontally |
 | `Ctrl-v`                     | Open vertically   |
+| `Ctrl-t`                     | Toggle preview    |
 | `Escape`, `Ctrl-c`           | Close picker      |
 
 # Prompt

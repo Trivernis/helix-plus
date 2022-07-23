@@ -264,6 +264,7 @@ impl MappableCommand {
         file_picker_in_current_directory, "Open file picker at current working directory",
         code_action, "Perform code action",
         buffer_picker, "Open buffer picker",
+        jumplist_picker, "Open jumplist picker",
         symbol_picker, "Open symbol picker",
         select_references_to_symbol_under_cursor, "Select symbol references",
         workspace_symbol_picker, "Open workspace symbol picker",
@@ -718,6 +719,8 @@ fn kill_to_line_start(cx: &mut Context) {
         Range::new(head, anchor)
     });
     delete_selection_insert_mode(doc, view, &selection);
+
+    lsp::signature_help_impl(cx, SignatureHelpInvoked::Automatic);
 }
 
 fn kill_to_line_end(cx: &mut Context) {
@@ -737,6 +740,8 @@ fn kill_to_line_end(cx: &mut Context) {
         new_range
     });
     delete_selection_insert_mode(doc, view, &selection);
+
+    lsp::signature_help_impl(cx, SignatureHelpInvoked::Automatic);
 }
 
 fn goto_first_nonwhitespace(cx: &mut Context) {
@@ -2306,6 +2311,87 @@ fn buffer_picker(cx: &mut Context) {
     cx.push_layer(Box::new(overlayed(picker)));
 }
 
+fn jumplist_picker(cx: &mut Context) {
+    struct JumpMeta {
+        id: DocumentId,
+        path: Option<PathBuf>,
+        selection: Selection,
+        text: String,
+        is_current: bool,
+    }
+
+    impl ui::menu::Item for JumpMeta {
+        type Data = ();
+
+        fn label(&self, _data: &Self::Data) -> Spans {
+            let path = self
+                .path
+                .as_deref()
+                .map(helix_core::path::get_relative_path);
+            let path = match path.as_deref().and_then(Path::to_str) {
+                Some(path) => path,
+                None => SCRATCH_BUFFER_NAME,
+            };
+
+            let mut flags = Vec::new();
+            if self.is_current {
+                flags.push("*");
+            }
+
+            let flag = if flags.is_empty() {
+                "".into()
+            } else {
+                format!(" ({})", flags.join(""))
+            };
+            format!("{} {}{} {}", self.id, path, flag, self.text).into()
+        }
+    }
+
+    let new_meta = |view: &View, doc_id: DocumentId, selection: Selection| {
+        let doc = &cx.editor.documents.get(&doc_id);
+        let text = doc.map_or("".into(), |d| {
+            selection
+                .fragments(d.text().slice(..))
+                .map(Cow::into_owned)
+                .collect::<Vec<_>>()
+                .join(" ")
+        });
+
+        JumpMeta {
+            id: doc_id,
+            path: doc.and_then(|d| d.path().cloned()),
+            selection,
+            text,
+            is_current: view.doc == doc_id,
+        }
+    };
+
+    let picker = FilePicker::new(
+        cx.editor
+            .tree
+            .views()
+            .flat_map(|(view, _)| {
+                view.jumps
+                    .get()
+                    .iter()
+                    .map(|(doc_id, selection)| new_meta(view, *doc_id, selection.clone()))
+            })
+            .collect(),
+        (),
+        |cx, meta, action| {
+            cx.editor.switch(meta.id, action);
+            let (view, doc) = current!(cx.editor);
+            doc.set_selection(view.id, meta.selection.clone());
+        },
+        |editor, meta| {
+            let doc = &editor.documents.get(&meta.id)?;
+            let line = meta.selection.primary().cursor_line(doc.text().slice(..));
+            Some((meta.path.clone()?, Some((line, line))))
+        },
+    );
+    cx.push_layer(Box::new(overlayed(picker)));
+}
+
 impl ui::menu::Item for MappableCommand {
     type Data = ReverseKeymap;
 
@@ -2439,7 +2525,8 @@ async fn make_format_callback(
     Ok(call)
 }
 
-enum Open {
+#[derive(PartialEq)]
+pub enum Open {
     Below,
     Above,
 }
@@ -2837,6 +2924,9 @@ pub mod insert {
         use helix_lsp::lsp;
         // if ch matches signature_help char, trigger
         let doc = doc_mut!(cx.editor);
+        // The language_server!() macro is not used here since it will
+        // print an "LSP not active for current buffer" message on
+        // every keypress.
         let language_server = match doc.language_server() {
             Some(language_server) => language_server,
             None => return,
@@ -2856,26 +2946,15 @@ pub mod insert {
         {
             // TODO: what if trigger is multiple chars long
             let is_trigger = triggers.iter().any(|trigger| trigger.contains(ch));
+            // lsp doesn't tell us when to close the signature help, so we request
+            // the help information again after common close triggers which should
+            // return None, which in turn closes the popup.
+            let close_triggers = &[')', ';', '.'];
 
-            if is_trigger {
-                super::signature_help(cx);
+            if is_trigger || close_triggers.contains(&ch) {
+                super::signature_help_impl(cx, SignatureHelpInvoked::Automatic);
             }
         }
-
-        // SignatureHelp {
-        // signatures: [
-        //  SignatureInformation {
-        //      label: "fn open(&mut self, path: PathBuf, action: Action) -> Result<DocumentId, Error>",
-        //      documentation: None,
-        //      parameters: Some(
-        //          [ParameterInformation { label: Simple("path: PathBuf"), documentation: None },
-        //          ParameterInformation { label: Simple("action: Action"), documentation: None }]
-        //      ),
-        //      active_parameter: Some(0)
-        //  }
-        // ],
-        // active_signature: None, active_parameter: Some(0)
-        // }
     }
 
     // The default insert hook: simply insert the character
@@ -2910,7 +2989,6 @@ pub mod insert {
         // this could also generically look at Transaction, but it's a bit annoying to look at
         // Operation instead of Change.
         for hook in &[language_server_completion, signature_help] {
-            // for hook in &[signature_help] {
             hook(cx, c);
         }
     }
@@ -3018,14 +3096,18 @@ pub mod insert {
 
     pub fn delete_char_backward(cx: &mut Context) {
         let count = cx.count();
-        let (view, doc) = current!(cx.editor);
+        let (view, doc) = current_ref!(cx.editor);
         let text = doc.text().slice(..);
         let indent_unit = doc.indent_unit();
         let tab_size = doc.tab_width();
+        let auto_pairs = doc.auto_pairs(cx.editor);
 
         let transaction =
             Transaction::change_by_selection(doc.text(), doc.selection(view.id), |range| {
                 let pos = range.cursor(text);
+                if pos == 0 {
+                    return (pos, pos, None);
+                }
                 let line_start_pos = text.line_to_char(range.cursor_line(text));
                 // consider to delete by indent level if all characters before `pos` are indent units.
                 let fragment = Cow::from(text.slice(line_start_pos..pos));
@@ -3073,15 +3155,39 @@ pub mod insert {
                         (start, pos, None) // delete!
                     }
                 } else {
-                    // delete char
-                    (
-                        graphemes::nth_prev_grapheme_boundary(text, pos, count),
-                        pos,
-                        None,
-                    )
+                    match (
+                        text.get_char(pos.saturating_sub(1)),
+                        text.get_char(pos),
+                        auto_pairs,
+                    ) {
+                        (Some(_x), Some(_y), Some(ap))
+                            if range.is_single_grapheme(text)
+                                && ap.get(_x).is_some()
+                                && ap.get(_x).unwrap().close == _y =>
+                        // delete both autopaired characters
+                        {
+                            (
+                                graphemes::nth_prev_grapheme_boundary(text, pos, count),
+                                graphemes::nth_next_grapheme_boundary(text, pos, count),
+                                None,
+                            )
+                        }
+                        _ =>
+                        // delete 1 char
+                        {
+                            (
+                                graphemes::nth_prev_grapheme_boundary(text, pos, count),
+                                pos,
+                                None,
+                            )
+                        }
+                    }
                 }
             });
+        let (view, doc) = current!(cx.editor);
         doc.apply(&transaction, view.id);
+
+        lsp::signature_help_impl(cx, SignatureHelpInvoked::Automatic);
     }
 
     pub fn delete_char_forward(cx: &mut Context) {
@@ -3098,6 +3204,8 @@ pub mod insert {
                 )
             });
         doc.apply(&transaction, view.id);
+
+        lsp::signature_help_impl(cx, SignatureHelpInvoked::Automatic);
     }
 
     pub fn delete_word_backward(cx: &mut Context) {
@@ -3111,6 +3219,8 @@ pub mod insert {
             exclude_cursor(text, next, range)
         });
         delete_selection_insert_mode(doc, view, &selection);
+
+        lsp::signature_help_impl(cx, SignatureHelpInvoked::Automatic);
     }
 
     pub fn delete_word_forward(cx: &mut Context) {
@@ -3123,6 +3233,8 @@ pub mod insert {
             .clone()
             .transform(|range| movement::move_next_word_start(text, range, count));
         delete_selection_insert_mode(doc, view, &selection);
+
+        lsp::signature_help_impl(cx, SignatureHelpInvoked::Automatic);
     }
 }
 
@@ -4037,13 +4149,11 @@ fn split(cx: &mut Context, action: Action) {
     let (view, doc) = current!(cx.editor);
     let id = doc.id();
     let selection = doc.selection(view.id).clone();
-    let offset = view.offset;
 
     cx.editor.switch(id, action);
 
     // match the selection in the previous view
     let (view, doc) = current!(cx.editor);
-    view.offset = offset;
     doc.set_selection(view.id, selection);
 }
 
