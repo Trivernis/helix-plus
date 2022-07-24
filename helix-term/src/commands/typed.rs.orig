@@ -1475,6 +1475,7 @@ fn pipe(cx: &mut compositor::Context, args: &[Cow<str>], event: PromptEvent) -> 
     Ok(())
 }
 
+<<<<<<< HEAD
 fn run_shell_command(
     cx: &mut compositor::Context,
     args: &[Cow<str>],
@@ -1514,6 +1515,8 @@ fn run_shell_command(
     Ok(())
 }
 
+||||||| 4b1fe367
+=======
 fn lsp_restart(
     cx: &mut compositor::Context,
     _args: &[Cow<str>],
@@ -1524,6 +1527,7 @@ fn lsp_restart(
     Ok(())
 }
 
+>>>>>>> lsp-restart
 pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         TypableCommand {
             name: "quit",
@@ -1997,6 +2001,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
             fun: pipe,
             completer: None,
         },
+<<<<<<< HEAD
         TypableCommand {
             name: "run-shell-command",
             aliases: &["sh"],
@@ -2004,6 +2009,8 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
             fun: run_shell_command,
             completer: Some(completers::directory),
         },
+||||||| 4b1fe367
+=======
         TypableCommand {
             name: "lsp-restart",
             aliases: &[],
@@ -2011,6 +2018,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
             fun: lsp_restart,
             completer: None,
         },
+>>>>>>> lsp-restart
     ];
 
 pub static TYPABLE_COMMAND_MAP: Lazy<HashMap<&'static str, &'static TypableCommand>> =
