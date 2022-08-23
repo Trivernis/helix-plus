@@ -1254,6 +1254,7 @@ fn language(
 
     let doc = doc_mut!(cx.editor);
     doc.set_language_by_language_id(&args[0], cx.editor.syn_loader.clone());
+    doc.detect_indent_and_line_ending();
 
     let id = doc.id();
     cx.editor.refresh_language_server(id);
@@ -1291,8 +1292,8 @@ fn sort_impl(
     let selection = doc.selection(view.id);
 
     let mut fragments: Vec<_> = selection
-        .fragments(text)
-        .map(|fragment| Tendril::from(fragment.as_ref()))
+        .slices(text)
+        .map(|fragment| fragment.chunks().collect())
         .collect();
 
     fragments.sort_by(match reverse {
@@ -1535,7 +1536,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         TypableCommand {
             name: "quit!",
             aliases: &["q!"],
-            doc: "Close the current view forcefully (ignoring unsaved changes).",
+            doc: "Force close the current view, ignoring unsaved changes.",
             fun: force_quit,
             completer: None,
         },
@@ -1556,7 +1557,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         TypableCommand {
             name: "buffer-close!",
             aliases: &["bc!", "bclose!"],
-            doc: "Close the current buffer forcefully (ignoring unsaved changes).",
+            doc: "Close the current buffer forcefully, ignoring unsaved changes.",
             fun: force_buffer_close,
             completer: Some(completers::buffer),
         },
@@ -1570,35 +1571,35 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         TypableCommand {
             name: "buffer-close-others!",
             aliases: &["bco!", "bcloseother!"],
-            doc: "Close all buffers but the currently focused one.",
+            doc: "Force close all buffers but the currently focused one.",
             fun: force_buffer_close_others,
             completer: None,
         },
         TypableCommand {
             name: "buffer-close-all",
             aliases: &["bca", "bcloseall"],
-            doc: "Close all buffers, without quitting.",
+            doc: "Close all buffers without quitting.",
             fun: buffer_close_all,
             completer: None,
         },
         TypableCommand {
             name: "buffer-close-all!",
             aliases: &["bca!", "bcloseall!"],
-            doc: "Close all buffers forcefully (ignoring unsaved changes), without quitting.",
+            doc: "Force close all buffers ignoring unsaved changes without quitting.",
             fun: force_buffer_close_all,
             completer: None,
         },
         TypableCommand {
             name: "buffer-next",
             aliases: &["bn", "bnext"],
-            doc: "Go to next buffer.",
+            doc: "Goto next buffer.",
             fun: buffer_next,
             completer: None,
         },
         TypableCommand {
             name: "buffer-previous",
             aliases: &["bp", "bprev"],
-            doc: "Go to previous buffer.",
+            doc: "Goto previous buffer.",
             fun: buffer_previous,
             completer: None,
         },
@@ -1612,7 +1613,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         TypableCommand {
             name: "write!",
             aliases: &["w!"],
-            doc: "Write changes to disk forcefully (creating necessary subdirectories). Accepts an optional path (:write some/path.txt)",
+            doc: "Force write changes to disk creating necessary subdirectories. Accepts an optional path (:write some/path.txt)",
             fun: force_write,
             completer: Some(completers::filename),
         },
@@ -1706,7 +1707,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         TypableCommand {
             name: "quit-all!",
             aliases: &["qa!"],
-            doc: "Close all views forcefully (ignoring unsaved changes).",
+            doc: "Force close all views ignoring unsaved changes.",
             fun: force_quit_all,
             completer: None,
         },
@@ -1720,7 +1721,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         TypableCommand {
             name: "cquit!",
             aliases: &["cq!"],
-            doc: "Quit with exit code (default 1) forcefully (ignoring unsaved changes). Accepts an optional integer exit code (:cq! 2).",
+            doc: "Force quit with exit code (default 1) ignoring unsaved changes. Accepts an optional integer exit code (:cq! 2).",
             fun: force_cquit,
             completer: None,
         },
@@ -1825,7 +1826,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         TypableCommand {
             name: "encoding",
             aliases: &[],
-            doc: "Set encoding based on `https://encoding.spec.whatwg.org`",
+            doc: "Set encoding. Based on `https://encoding.spec.whatwg.org`.",
             fun: set_encoding,
             completer: None,
         },
@@ -1902,7 +1903,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         TypableCommand {
             name: "goto",
             aliases: &["g"],
-            doc: "Go to line number.",
+            doc: "Goto line number.",
             fun: goto_line_number,
             completer: None,
         },
@@ -1958,14 +1959,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         TypableCommand {
             name: "config-reload",
             aliases: &[],
-            doc: "Refreshes helix's config.",
+            doc: "Refresh user config.",
             fun: refresh_config,
             completer: None,
         },
         TypableCommand {
             name: "config-open",
             aliases: &[],
-            doc: "Open the helix config.toml file.",
+            doc: "Open the user config.toml file.",
             fun: open_config,
             completer: None,
         },

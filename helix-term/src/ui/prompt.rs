@@ -1,6 +1,5 @@
-use crate::compositor::{Component, Compositor, Context, EventResult};
+use crate::compositor::{Component, Compositor, Context, Event, EventResult};
 use crate::{alt, ctrl, key, shift, ui};
-use crossterm::event::Event;
 use helix_view::input::KeyEvent;
 use helix_view::keyboard::KeyCode;
 use std::{borrow::Cow, ops::RangeFrom};
@@ -479,7 +478,7 @@ impl Component for Prompt {
             compositor.pop();
         })));
 
-        match event.into() {
+        match event {
             ctrl!('c') | key!(Esc) => {
                 (self.callback_fn)(cx, &self.line, PromptEvent::Abort);
                 return close_fn;
@@ -533,16 +532,17 @@ impl Component for Prompt {
                             .map(|entry| entry.into())
                             .unwrap_or_else(|| Cow::from(""))
                     } else {
+                        if let Some(register) = self.history_register {
+                            // store in history
+                            let register = cx.editor.registers.get_mut(register);
+                            register.push(self.line.clone());
+                        }
+
                         self.line.as_str().into()
                     };
 
                     (self.callback_fn)(cx, &input, PromptEvent::Validate);
 
-                    if let Some(register) = self.history_register {
-                        // store in history
-                        let register = cx.editor.registers.get_mut(register);
-                        register.push(self.line.clone());
-                    }
                     return close_fn;
                 }
             }

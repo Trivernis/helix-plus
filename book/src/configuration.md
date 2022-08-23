@@ -25,6 +25,9 @@ select = "underline"
 hidden = false
 ```
 
+You may also specify a file to use for configuration with the `-c` or
+`--config` CLI argument: `hx -c path/to/custom-config.toml`.
+
 ## Editor
 
 ### `[editor]` Section
@@ -38,7 +41,7 @@ hidden = false
 | `shell` | Shell to use when running external commands. | Unix: `["sh", "-c"]`<br/>Windows: `["cmd", "/C"]` |
 | `line-number` | Line number display: `absolute` simply shows each line's number, while `relative` shows the distance from the current line. When unfocused or in insert mode, `relative` will still show absolute line numbers. | `absolute` |
 | `cursorline` | Highlight all lines with a cursor. | `false` |
-| `gutters` | Gutters to display: Available are `diagnostics` and `line-numbers` and `padding`, note that `diagnostics` also includes other features like breakpoints | `["diagnostics", "line-numbers", "padding"]` |
+| `gutters` | Gutters to display: Available are `diagnostics` and `line-numbers` and `spacer`, note that `diagnostics` also includes other features like breakpoints, 1-width padding will be inserted if gutters is non-empty | `["diagnostics", "line-numbers"]` |
 | `auto-completion` | Enable automatic pop up of auto-completion. | `true` |
 | `auto-format` | Enable automatic formatting on save. | `true` |
 | `idle-timeout` | Time in milliseconds since last keypress before idle timers trigger. Used for autocompletion, set to 0 for instant. | `400` |
@@ -63,6 +66,7 @@ Statusline elements can be defined as follows:
 left = ["mode", "spinner"]
 center = ["file-name"]
 right = ["diagnostics", "selections", "position", "file-encoding", "file-line-ending", "file-type"]
+separator = "│"
 ```
 
 The following elements can be configured:
@@ -78,6 +82,9 @@ The following elements can be configured:
 | `diagnostics` | The number of warnings and/or errors |
 | `selections` | The number of active selections |
 | `position` | The cursor position |
+| `position-percentage` | The cursor position as a percentage of the total number of lines |
+| `separator` | The string defined in `editor.statusline.separator` (defaults to `"│"`) |
+| `spacer` | Inserts a space between elements (multiple/contiguous spacers may be specified) |
 
 ### `[editor.lsp]` Section
 
@@ -112,6 +119,8 @@ the default file-picker configuration below are IgnoreOptions: whether hidden
 files and files listed within ignore files are ignored by (not visible in) the
 helix file picker and global search. There is also one other key, `max-depth`
 available, which is not defined by default.
+
+All git related options are only enabled in a git repository.
 
 | Key | Description | Default |
 |--|--|---------|
@@ -185,7 +194,7 @@ Options for rendering whitespace with visible characters. Use `:set whitespace.r
 | Key | Description | Default |
 |-----|-------------|---------|
 | `render` | Whether to render whitespace. May either be `"all"` or `"none"`, or a table with sub-keys `space`, `tab`, and `newline`. | `"none"` |
-| `characters` | Literal characters to use when rendering whitespace. Sub-keys may be any of `tab`, `space`, `nbsp` or `newline` | See example below |
+| `characters` | Literal characters to use when rendering whitespace. Sub-keys may be any of `tab`, `space`, `nbsp`, `newline` or `tabpad` | See example below |
 
 Example
 
@@ -203,6 +212,7 @@ space = "·"
 nbsp = "⍽"
 tab = "→"
 newline = "⏎"
+tabpad = "·" # Tabs will look like "→···" (depending on tab width)
 ```
 
 ### `[editor.indent-guides]` Section
