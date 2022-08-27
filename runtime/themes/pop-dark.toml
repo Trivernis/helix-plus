@@ -41,9 +41,8 @@ label = { fg = 'greenS' }
 module = { bg = 'orangeL' }
 special = { fg = 'orangeW' }
 operator = { fg = 'orangeY' }
-property = { bg = 'blueH' }
 attribute = { fg = 'orangeL' }
-attributes = { fg = 'orangeL' }
+attribute = { fg = 'orangeL' }
 namespace = { fg = 'orangeL' }
 'type' = { fg = 'redH' }
 'type.builtin' = { fg = 'orangeL' }
@@ -71,7 +70,7 @@ namespace = { fg = 'orangeL' }
 'variable.other.member' = { fg = 'orangeH' }
 'variable.function' = { fg = 'blueL' }
 'punctuation' = { fg = 'blueL' }
-'punctuation.delimeter' = { fg = 'blueH' }
+'punctuation.delimiter' = { fg = 'blueH' }
 'punctuation.bracket' = { fg = 'orangeN' }
 'keyword' = { fg = 'blueH' }
 'keyword.control' = { fg = 'blueL' }

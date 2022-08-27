@@ -1,6 +1,8 @@
 | Language | Syntax Highlighting | Treesitter Textobjects | Auto Indent | Default LSP |
 | --- | --- | --- | --- | --- |
+| awk | ✓ | ✓ |  | `awk-language-server` |
 | bash | ✓ |  |  | `bash-language-server` |
+| beancount | ✓ |  |  |  |
 | c | ✓ | ✓ | ✓ | `clangd` |
 | c-sharp | ✓ |  |  | `OmniSharp` |
 | cairo | ✓ |  |  |  |
@@ -10,17 +12,22 @@
 | cpon | ✓ |  | ✓ |  |
 | cpp | ✓ | ✓ | ✓ | `clangd` |
 | css | ✓ |  |  | `vscode-css-language-server` |
+| cue | ✓ |  |  | `cuelsp` |
 | dart | ✓ |  | ✓ | `dart` |
 | devicetree | ✓ |  | ✓ |  |
 | dockerfile | ✓ |  |  | `docker-langserver` |
+| dot | ✓ |  |  | `dot-language-server` |
 | edoc | ✓ |  |  |  |
 | eex | ✓ |  |  |  |
 | ejs | ✓ |  |  |  |
 | elixir | ✓ | ✓ |  | `elixir-ls` |
 | elm | ✓ |  |  | `elm-language-server` |
+| elvish | ✓ |  |  | `elvish` |
 | erb | ✓ |  |  |  |
 | erlang | ✓ | ✓ |  | `erlang_ls` |
+| esdl | ✓ |  |  |  |
 | fish | ✓ | ✓ | ✓ |  |
+| fortran | ✓ |  | ✓ | `fortls` |
 | gdscript | ✓ |  | ✓ |  |
 | git-attributes | ✓ |  |  |  |
 | git-commit | ✓ |  |  |  |
@@ -28,26 +35,28 @@
 | git-diff | ✓ |  |  |  |
 | git-ignore | ✓ |  |  |  |
 | git-rebase | ✓ |  |  |  |
-| gleam | ✓ | ✓ |  |  |
-| glsl | ✓ |  | ✓ |  |
+| gleam | ✓ | ✓ |  | `gleam` |
+| glsl | ✓ | ✓ | ✓ |  |
 | go | ✓ | ✓ | ✓ | `gopls` |
 | gomod | ✓ |  |  | `gopls` |
+| gotmpl | ✓ |  |  | `gopls` |
 | gowork | ✓ |  |  | `gopls` |
 | graphql | ✓ |  |  |  |
 | hare | ✓ |  | ✓ |  |
 | haskell | ✓ |  |  | `haskell-language-server-wrapper` |
 | hcl | ✓ |  | ✓ | `terraform-ls` |
-| heex | ✓ |  |  |  |
+| heex | ✓ | ✓ |  |  |
 | html | ✓ |  |  | `vscode-html-language-server` |
+| idris |  |  |  | `idris2-lsp` |
 | iex | ✓ |  |  |  |
 | java | ✓ |  |  | `jdtls` |
-| javascript | ✓ |  | ✓ | `typescript-language-server` |
+| javascript | ✓ | ✓ | ✓ | `typescript-language-server` |
 | jsdoc | ✓ |  |  |  |
 | json | ✓ |  | ✓ | `vscode-json-language-server` |
-| jsx | ✓ |  | ✓ | `typescript-language-server` |
+| jsx | ✓ | ✓ | ✓ | `typescript-language-server` |
 | julia | ✓ |  |  | `julia` |
 | kotlin | ✓ |  |  | `kotlin-language-server` |
-| latex | ✓ |  |  | `texlab` |
+| latex | ✓ | ✓ |  | `texlab` |
 | lean | ✓ |  |  | `lean` |
 | ledger | ✓ |  |  |  |
 | llvm | ✓ | ✓ | ✓ |  |
@@ -56,6 +65,7 @@
 | lua | ✓ |  | ✓ | `lua-language-server` |
 | make | ✓ |  |  |  |
 | markdown | ✓ |  |  |  |
+| markdown.inline | ✓ |  |  |  |
 | meson | ✓ |  | ✓ |  |
 | mint |  |  |  | `mint` |
 | nickel | ✓ |  | ✓ | `nls` |
@@ -63,7 +73,7 @@
 | nu | ✓ |  |  |  |
 | ocaml | ✓ |  | ✓ | `ocamllsp` |
 | ocaml-interface | ✓ |  |  | `ocamllsp` |
-| odin | ✓ |  |  |  |
+| odin | ✓ |  |  | `ols` |
 | openscad | ✓ |  |  | `openscad-language-server` |
 | org | ✓ |  |  |  |
 | perl | ✓ | ✓ | ✓ |  |
@@ -71,7 +81,7 @@
 | prisma | ✓ |  |  | `prisma-language-server` |
 | prolog |  |  |  | `swipl` |
 | protobuf | ✓ |  | ✓ |  |
-| python | ✓ | ✓ | ✓ | `pylsp` |
+| python | ✓ | ✓ |  | `pylsp` |
 | r | ✓ |  |  | `R` |
 | racket |  |  |  | `racket` |
 | regex | ✓ |  |  |  |
@@ -82,22 +92,28 @@
 | rust | ✓ | ✓ | ✓ | `rust-analyzer` |
 | scala | ✓ |  | ✓ | `metals` |
 | scheme | ✓ |  |  |  |
+| scss | ✓ |  |  | `vscode-css-language-server` |
+| slint | ✓ |  | ✓ | `slint-lsp` |
 | solidity | ✓ |  |  | `solc` |
 | sql | ✓ |  |  |  |
 | sshclientconfig | ✓ |  |  |  |
+| starlark | ✓ | ✓ |  |  |
 | svelte | ✓ |  | ✓ | `svelteserver` |
 | swift | ✓ |  |  | `sourcekit-lsp` |
 | tablegen | ✓ | ✓ | ✓ |  |
+| task | ✓ |  |  |  |
 | tfvars |  |  |  | `terraform-ls` |
 | toml | ✓ |  |  | `taplo` |
 | tsq | ✓ |  |  |  |
-| tsx | ✓ |  |  | `typescript-language-server` |
+| tsx | ✓ | ✓ | ✓ | `typescript-language-server` |
 | twig | ✓ |  |  |  |
-| typescript | ✓ |  | ✓ | `typescript-language-server` |
+| typescript | ✓ | ✓ | ✓ | `typescript-language-server` |
+| ungrammar | ✓ |  |  |  |
 | v | ✓ |  |  | `vls` |
 | vala | ✓ |  |  | `vala-language-server` |
 | verilog | ✓ | ✓ |  | `svlangserver` |
 | vue | ✓ |  |  | `vls` |
-| wgsl | ✓ |  |  |  |
+| wgsl | ✓ |  |  | `wgsl_analyzer` |
+| xit | ✓ |  |  |  |
 | yaml | ✓ |  | ✓ | `yaml-language-server` |
 | zig | ✓ |  | ✓ | `zls` |

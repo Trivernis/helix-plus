@@ -4,11 +4,11 @@ use crate::{
     ctrl, key, shift, ui,
 };
 use anyhow::{bail, ensure, Result};
-use crossterm::event::{Event, KeyEvent};
 use helix_core::Position;
 use helix_view::{
     editor::Action,
     graphics::{CursorKind, Modifier, Rect},
+    input::{Event, KeyEvent},
     Editor,
 };
 use std::borrow::Cow;
@@ -453,7 +453,7 @@ impl Explorer {
             }
         };
         if meta.is_file() {
-            if let Err(e) = cx.editor.open(item.path.clone(), Action::Replace) {
+            if let Err(e) = cx.editor.open(&item.path, Action::Replace) {
                 cx.editor.set_error(format!("{e}"));
             }
             state.focus = false;

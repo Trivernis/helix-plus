@@ -57,6 +57,7 @@
   "::"
   "."
   ";"
+  ","
 ] @punctuation.delimiter
 
 [
@@ -77,6 +78,8 @@
     "<"
     ">"
   ] @punctuation.bracket)
+(closure_parameters
+  "|" @punctuation.bracket)
 
 ; ---
 ; Variables
@@ -95,8 +98,6 @@
   value: (identifier)? @variable
   field: (field_identifier) @variable.other.member))
 
-(arguments
-  (identifier) @variable.parameter)
 (parameter
 	pattern: (identifier) @variable.parameter)
 (closure_parameters
@@ -141,7 +142,6 @@
   "mod"
   "extern"
 
-  "fn"
   "struct"
   "enum"
   "impl"
@@ -159,6 +159,8 @@
 
   "async"
 ] @keyword
+
+"fn" @keyword.function
 
 (mutable_specifier) @keyword.storage.modifier.mut
 

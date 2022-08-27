@@ -144,7 +144,7 @@ impl Markdown {
         }
     }
 
-    fn parse(&self, theme: Option<&Theme>) -> tui::text::Text<'_> {
+    pub fn parse(&self, theme: Option<&Theme>) -> tui::text::Text<'_> {
         fn push_line<'a>(spans: &mut Vec<Span<'a>>, lines: &mut Vec<Spans<'a>>) {
             let spans = std::mem::take(spans);
             if !spans.is_empty() {
@@ -204,7 +204,7 @@ impl Markdown {
 
                     tags.push(Tag::Item);
 
-                    // get the approriate bullet for the current list
+                    // get the appropriate bullet for the current list
                     let bullet = list_stack
                         .last()
                         .unwrap_or(&None) // use the '- ' bullet in case the list stack would be empty
@@ -229,10 +229,7 @@ impl Markdown {
                 Event::End(tag) => {
                     tags.pop();
                     match tag {
-                        Tag::Heading(_, _, _)
-                        | Tag::Paragraph
-                        | Tag::CodeBlock(CodeBlockKind::Fenced(_))
-                        | Tag::Item => {
+                        Tag::Heading(_, _, _) | Tag::Paragraph | Tag::CodeBlock(_) | Tag::Item => {
                             push_line(&mut spans, &mut lines);
                         }
                         _ => (),
@@ -240,17 +237,18 @@ impl Markdown {
 
                     // whenever heading, code block or paragraph closes, empty line
                     match tag {
-                        Tag::Heading(_, _, _)
-                        | Tag::Paragraph
-                        | Tag::CodeBlock(CodeBlockKind::Fenced(_)) => {
+                        Tag::Heading(_, _, _) | Tag::Paragraph | Tag::CodeBlock(_) => {
                             lines.push(Spans::default());
                         }
                         _ => (),
                     }
                 }
                 Event::Text(text) => {
-                    // TODO: temp workaround
-                    if let Some(Tag::CodeBlock(CodeBlockKind::Fenced(language))) = tags.last() {
+                    if let Some(Tag::CodeBlock(kind)) = tags.last() {
+                        let language = match kind {
+                            CodeBlockKind::Fenced(language) => language,
+                            CodeBlockKind::Indented => "",
+                        };
                         let tui_text = highlighted_code_block(
                             text.to_string(),
                             language,
@@ -323,10 +321,7 @@ impl Component for Markdown {
             .wrap(Wrap { trim: false })
             .scroll((cx.scroll.unwrap_or_default() as u16, 0));
 
-        let margin = Margin {
-            vertical: 1,
-            horizontal: 1,
-        };
+        let margin = Margin::all(1);
         par.render(area.inner(&margin), surface);
     }
 
