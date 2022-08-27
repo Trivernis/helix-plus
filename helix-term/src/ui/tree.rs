@@ -8,8 +8,10 @@ use crate::{
     ctrl, key, shift,
 };
 use helix_core::unicode::width::UnicodeWidthStr;
-use helix_view::input::Event;
-use helix_view::{graphics::Rect, input::KeyEvent};
+use helix_view::{
+    graphics::Rect,
+    input::{Event, KeyEvent},
+};
 use tui::{buffer::Buffer as Surface, text::Spans};
 
 pub trait TreeItem: Sized {

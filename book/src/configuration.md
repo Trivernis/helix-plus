@@ -214,6 +214,18 @@ tab = "→"
 newline = "⏎"
 tabpad = "·" # Tabs will look like "→···" (depending on tab width)
 ```
+<<<<<<< HEAD
+
+### `[editor.explorer]` Section
+Sets explorer side width and style.
+
+ | Key            | Description                                                                              | Default |
+ | ---            | -----------                                                                              | ------- |
+ | `column-width` | explorer side width                                                                      | 30      |
+ | `style`        | explorer item style, tree or list                                                        | tree    |
+ | `position`     | explorer widget position, embed or overlay                                               | overlay |
+||||||| 43027d91
+=======
 
 ### `[editor.indent-guides]` Section
 
@@ -240,3 +252,4 @@ Sets explorer side width and style.
  | `column-width` | explorer side width                                                                      | 30      |
  | `style`        | explorer item style, tree or list                                                        | tree    |
  | `position`     | explorer widget position, embed or overlay                                               | overlay |
+>>>>>>> 0e04c4c93caadb704c11a72bcf626b1f10ff2d98

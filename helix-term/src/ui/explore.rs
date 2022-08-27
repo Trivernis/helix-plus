@@ -5,10 +5,10 @@ use crate::{
 };
 use anyhow::{bail, ensure, Result};
 use helix_core::Position;
-use helix_view::input::{Event, KeyEvent};
 use helix_view::{
     editor::Action,
     graphics::{CursorKind, Modifier, Rect},
+    input::{Event, KeyEvent},
     Editor,
 };
 use std::borrow::Cow;
