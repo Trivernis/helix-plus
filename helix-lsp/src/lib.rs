@@ -38,6 +38,8 @@ pub enum Error {
     Timeout,
     #[error("server closed the stream")]
     StreamClosed,
+    #[error("LPS not defined")]
+    LspNotDefined,
     #[error("Unhandled")]
     Unhandled,
     #[error(transparent)]
