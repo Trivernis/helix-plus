@@ -973,7 +973,7 @@ impl Editor {
         view.doc = doc_id;
         view.offset = Position::default();
 
-        let doc = self.documents.get_mut(&doc_id).unwrap();
+        let doc = doc_mut!(self, &doc_id);
         doc.ensure_view_init(view.id);
 
         // TODO: reuse align_view
@@ -1044,7 +1044,7 @@ impl Editor {
             }
             Action::Load => {
                 let view_id = view!(self).id;
-                let doc = self.documents.get_mut(&id).unwrap();
+                let doc = doc_mut!(self, &id);
                 doc.ensure_view_init(view_id);
                 return;
             }
@@ -1065,7 +1065,7 @@ impl Editor {
                     },
                 );
                 // initialize selection for view
-                let doc = self.documents.get_mut(&id).unwrap();
+                let doc = doc_mut!(self, &id);
                 doc.ensure_view_init(view_id);
             }
         }
@@ -1119,9 +1119,9 @@ impl Editor {
     }
 
     pub fn close(&mut self, id: ViewId) {
-        let view = self.tree.get(self.tree.focus);
+        let (_view, doc) = current!(self);
         // remove selection
-        self.documents.get_mut(&view.doc).unwrap().remove_view(id);
+        doc.remove_view(id);
         self.tree.remove(id);
         self._refresh();
     }
@@ -1195,7 +1195,7 @@ impl Editor {
                 .unwrap_or_else(|| self.new_document(Document::default()));
             let view = View::new(doc_id, self.config().gutters.clone());
             let view_id = self.tree.insert(view);
-            let doc = self.documents.get_mut(&doc_id).unwrap();
+            let doc = doc_mut!(self, &doc_id);
             doc.ensure_view_init(view_id);
         }
 
