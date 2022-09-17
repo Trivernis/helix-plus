@@ -543,12 +543,19 @@ impl Document {
             }
 
             if let Some(fmt) = formatting {
-                let transaction = fmt.await?;
-                let success = transaction.changes().apply(&mut text);
-                if !success {
-                    // This shouldn't happen, because the transaction changes were generated
-                    // from the same text we're saving.
-                    log::error!("failed to apply format changes before saving");
+                match fmt.await {
+                    Ok(transaction) => {
+                        let success = transaction.changes().apply(&mut text);
+                        if !success {
+                            // This shouldn't happen, because the transaction changes were generated
+                            // from the same text we're saving.
+                            log::error!("failed to apply format changes before saving");
+                        }
+                    }
+                    Err(err) => {
+                        // formatting failed: report error, and save file without modifications
+                        log::error!("{}", err);
+                    }
                 }
             }
 
@@ -676,9 +683,12 @@ impl Document {
         &mut self,
         language_id: &str,
         config_loader: Arc<syntax::Loader>,
-    ) {
-        let language_config = config_loader.language_config_for_language_id(language_id);
-        self.set_language(language_config, Some(config_loader));
+    ) -> anyhow::Result<()> {
+        let language_config = config_loader
+            .language_config_for_language_id(language_id)
+            .ok_or_else(|| anyhow!("invalid language id: {}", language_id))?;
+        self.set_language(Some(language_config), Some(config_loader));
+        Ok(())
     }
 
     /// Set the LSP.
