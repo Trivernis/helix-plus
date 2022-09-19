@@ -232,7 +232,8 @@ pub fn default() -> HashMap<Mode, Keymap> {
                 "e" => dap_enable_exceptions,
                 "E" => dap_disable_exceptions,
             },
-            "w" => { "Window"
+            "w" => workspace_command_picker,
+            "v" => { "Window"
                 "C-w" | "w" => rotate_view,
                 "C-s" | "s" => hsplit,
                 "C-v" | "v" => vsplit,
