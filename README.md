@@ -1,4 +1,6 @@
-# Helix
+# Helix Plus
+
+<h1 style="color:red">This is an unstable fork of helix with some PRs merged and some merge conflicts resolved </h1> 
 
 [![Build status](https://github.com/helix-editor/helix/actions/workflows/build.yml/badge.svg)](https://github.com/helix-editor/helix/actions)
 

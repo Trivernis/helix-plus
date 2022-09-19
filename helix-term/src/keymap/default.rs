@@ -169,7 +169,7 @@ pub fn default() -> HashMap<Mode, Keymap> {
         "C-u" => half_page_up,
         "C-d" => half_page_down,
 
-        "C-w" => { "Window"
+        "C-v" => { "View"
             "C-w" | "w" => rotate_view,
             "C-s" | "s" => hsplit,
             "C-v" | "v" => vsplit,
@@ -233,7 +233,7 @@ pub fn default() -> HashMap<Mode, Keymap> {
                 "E" => dap_disable_exceptions,
             },
             "w" => workspace_command_picker,
-            "v" => { "Window"
+            "v" => { "View"
                 "C-w" | "w" => rotate_view,
                 "C-s" | "s" => hsplit,
                 "C-v" | "v" => vsplit,
