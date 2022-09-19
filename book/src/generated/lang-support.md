@@ -3,6 +3,7 @@
 | astro | ✓ |  |  |  |
 | awk | ✓ | ✓ |  | `awk-language-server` |
 | bash | ✓ |  |  | `bash-language-server` |
+| bass | ✓ |  |  | `bass` |
 | beancount | ✓ |  |  |  |
 | c | ✓ | ✓ | ✓ | `clangd` |
 | c-sharp | ✓ | ✓ |  | `OmniSharp` |
@@ -67,7 +68,7 @@
 | llvm-mir-yaml | ✓ |  | ✓ |  |
 | lua | ✓ |  | ✓ | `lua-language-server` |
 | make | ✓ |  |  |  |
-| markdown | ✓ |  |  |  |
+| markdown | ✓ |  |  | `marksman` |
 | markdown.inline | ✓ |  |  |  |
 | meson | ✓ |  | ✓ |  |
 | mint |  |  |  | `mint` |
