@@ -2,6 +2,15 @@
 
 <h1 style="color:red">This is an unstable fork of helix with some PRs merged and some merge conflicts resolved </h1> 
 
+# Merged PRs
+
+ - [File explorer and tree helper](https://github.com/helix-editor/helix/pull/2377)
+ - [Add LSP workspace command picker](https://github.com/helix-editor/helix/pull/3140)
+
+And others I forgot about...
+
+- - -
+
 [![Build status](https://github.com/helix-editor/helix/actions/workflows/build.yml/badge.svg)](https://github.com/helix-editor/helix/actions)
 
 ![Screenshot](./screenshot.png)
