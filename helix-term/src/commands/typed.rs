@@ -1559,16 +1559,6 @@ fn run_shell_command(
     Ok(())
 }
 
-fn lsp_restart(
-    cx: &mut compositor::Context,
-    _args: &[Cow<str>],
-    _event: PromptEvent,
-) -> anyhow::Result<()> {
-    let current_document = doc!(cx.editor).id();
-    cx.editor.restart_language_server(current_document);
-    Ok(())
-}
-
 pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         TypableCommand {
             name: "quit",

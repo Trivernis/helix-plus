@@ -338,33 +338,6 @@ impl Registry {
             .map(|(_, client)| client.as_ref())
     }
 
-    pub fn restart(
-        &mut self,
-        language_config: &LanguageConfiguration,
-    ) -> Result<Option<Arc<Client>>> {
-        let config = match &language_config.language_server {
-            Some(config) => config,
-            None => return Ok(None),
-        };
-
-        let scope = language_config.scope.clone();
-
-        match self.inner.entry(scope) {
-            Entry::Vacant(_) => Ok(None),
-            Entry::Occupied(mut entry) => {
-                // initialize a new client
-                let id = self.counter.fetch_add(1, Ordering::Relaxed);
-
-                let NewClientResult(client, incoming) = start_client(id, language_config, config)?;
-                self.incoming.push(UnboundedReceiverStream::new(incoming));
-
-                entry.insert((id, client.clone()));
-
-                Ok(Some(client))
-            }
-        }
-    }
-
     pub fn get(&mut self, language_config: &LanguageConfiguration) -> Result<Option<Arc<Client>>> {
         let config = match &language_config.language_server {
             Some(config) => config,
@@ -385,6 +358,7 @@ impl Registry {
             }
         }
     }
+
     pub fn restart(&mut self, language_config: &LanguageConfiguration) -> Result<Arc<Client>> {
         let config = language_config
             .language_server
