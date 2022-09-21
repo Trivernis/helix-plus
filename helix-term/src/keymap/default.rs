@@ -10,6 +10,8 @@ pub fn default() -> HashMap<Mode, Keymap> {
         "j" | "down" => move_line_down,
         "k" | "up" => move_line_up,
         "l" | "right" => move_char_right,
+        "C-j" => half_page_down,
+        "C-k" => half_page_up,
 
         "t" => find_till_char,
         "f" => find_next_char,

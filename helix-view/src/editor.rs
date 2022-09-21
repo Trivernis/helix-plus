@@ -154,7 +154,7 @@ impl Default for ExplorerConfig {
     fn default() -> Self {
         Self {
             style: ExplorerStyle::Tree,
-            position: ExplorerPosition::Overlay,
+            position: ExplorerPosition::Embed,
             column_width: 30,
         }
     }
@@ -322,7 +322,16 @@ impl Default for StatusLineConfig {
         Self {
             left: vec![E::Mode, E::Spinner, E::FileName],
             center: vec![],
-            right: vec![E::Diagnostics, E::Selections, E::Position, E::FileEncoding],
+            right: vec![
+                E::Diagnostics,
+                E::Selections,
+                E::Position,
+                E::PositionPercentage,
+                E::Separator,
+                E::FileEncoding,
+                E::FileLineEnding,
+                E::FileType,
+            ],
             separator: String::from("│"),
         }
     }
@@ -418,7 +427,7 @@ impl std::ops::Deref for CursorShapeConfig {
 
 impl Default for CursorShapeConfig {
     fn default() -> Self {
-        Self([CursorKind::Block; 3])
+        Self([CursorKind::Block, CursorKind::Underline, CursorKind::Bar])
     }
 }
 
@@ -591,7 +600,7 @@ pub struct IndentGuidesConfig {
 impl Default for IndentGuidesConfig {
     fn default() -> Self {
         Self {
-            render: false,
+            render: true,
             character: '│',
         }
     }
@@ -609,7 +618,7 @@ impl Default for Config {
                 vec!["sh".to_owned(), "-c".to_owned()]
             },
             line_number: LineNumber::Absolute,
-            cursorline: false,
+            cursorline: true,
             gutters: vec![GutterType::Diagnostics, GutterType::LineNumbers],
             middle_click_paste: true,
             auto_pairs: AutoPairConfig::default(),
@@ -625,11 +634,11 @@ impl Default for Config {
             search: SearchConfig::default(),
             lsp: LspConfig::default(),
             terminal: get_terminal_provider(),
-            rulers: Vec::new(),
+            rulers: vec![120],
             whitespace: WhitespaceConfig::default(),
             bufferline: BufferLine::default(),
             indent_guides: IndentGuidesConfig::default(),
-            color_modes: false,
+            color_modes: true,
             explorer: ExplorerConfig::default(),
         }
     }
