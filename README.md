@@ -5,7 +5,7 @@
 # Merged PRs
 
  - [File explorer and tree helper](https://github.com/helix-editor/helix/pull/2377)
-  - [with Icons](https://github.com/r0l1/helix/tree/tree_explorer_icons)
+   - [with Icons](https://github.com/r0l1/helix/tree/tree_explorer_icons)
  - [Add LSP workspace command picker](https://github.com/helix-editor/helix/pull/3140)
 
 And others I forgot about...
