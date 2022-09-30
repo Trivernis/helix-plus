@@ -592,6 +592,7 @@ impl<T: TreeItem> Tree<T> {
             key!('l') => self.move_right(1.max(count)),
             shift!('G') => self.move_down(usize::MAX / 2),
             key!(Enter) => self.on_enter(cx, params),
+            key!(' ') => self.on_enter(cx, params),
             ctrl!('d') => self.move_down_half_page(),
             ctrl!('u') => self.move_up_half_page(),
             shift!('D') => self.move_down_page(),
