@@ -7,6 +7,7 @@
  - [File explorer and tree helper](https://github.com/helix-editor/helix/pull/2377)
    - [with Icons](https://github.com/r0l1/helix/tree/tree_explorer_icons)
  - [Add LSP workspace command picker](https://github.com/helix-editor/helix/pull/3140)
+ - [completion fix](https://github.com/helix-editor/helix/pull/1819)
 
 And others I forgot about...
 
