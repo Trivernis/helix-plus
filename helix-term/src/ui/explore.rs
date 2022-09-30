@@ -321,6 +321,16 @@ impl Explorer {
         })
     }
 
+    pub fn set_selection(&mut self, path: &Path) {
+        let info = if path.is_file() {
+            FileInfo::new(path.into(), FileType::File)
+        } else {
+            FileInfo::new(path.into(), FileType::Dir)
+        };
+        self.tree.select(&info);
+        self.tree.save_view();
+    }
+
     pub fn new_explorer_recursion() -> Result<Self> {
         let current_root = std::env::current_dir().unwrap_or_else(|_| "./".into());
         let parent = FileInfo::parent(&current_root);

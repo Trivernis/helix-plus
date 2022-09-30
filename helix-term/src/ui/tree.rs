@@ -431,6 +431,19 @@ impl<T: TreeItem> Tree<T> {
         self.items[self.selected].item = item;
     }
 
+    pub fn select(&mut self, select_item: &T) {
+        let selected = self
+            .items
+            .iter()
+            .enumerate()
+            .filter(|(_, i)| i.item.cmp(select_item) == Ordering::Equal)
+            .next();
+        if let Some((idx, _)) = selected {
+            self.selected = idx;
+            self.row = idx;
+        }
+    }
+
     pub fn insert_current_level(&mut self, item: T) {
         let current = self.current();
         let level = current.level;

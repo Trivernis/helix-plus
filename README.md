@@ -11,6 +11,13 @@
 
 And others I forgot about...
 
+
+# Applied Changes
+
+- Changed opening the window popup from `ctrl + w` to `ctrl + v`
+- Added an auto select for files in the tree explorer when jumping through opened buffers 
+- Changed some default settings (enabling bufferline, indent guides, the embedded explorer, cursor modes etc.)
+
 - - -
 
 [![Build status](https://github.com/helix-editor/helix/actions/workflows/build.yml/badge.svg)](https://github.com/helix-editor/helix/actions)
