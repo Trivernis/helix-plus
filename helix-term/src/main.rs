@@ -72,6 +72,7 @@ FLAGS:
     -V, --version                  Prints version information
     --vsplit                       Splits all given files vertically into different windows
     --hsplit                       Splits all given files horizontally into different windows
+    --show-explorer                Opens the explorer on startup
 ",
         env!("CARGO_PKG_NAME"),
         env!("VERSION_AND_GIT_HASH"),

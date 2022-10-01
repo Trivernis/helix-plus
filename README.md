@@ -15,8 +15,9 @@ And others I forgot about...
 # Applied Changes
 
 - Changed opening the window popup from `ctrl + w` to `ctrl + v`
-- Added an auto select for files in the tree explorer when jumping through opened buffers 
+- Added an auto highlight for files in the tree explorer when jumping through opened buffers 
 - Changed some default settings (enabling bufferline, indent guides, the embedded explorer, cursor modes etc.)
+- Added a `--show-explorer` cli flag to open the file explorer on startup (useful for embedded explorer mode)
 
 - - -
 
