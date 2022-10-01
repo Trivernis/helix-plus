@@ -250,6 +250,7 @@ fn delete(
     let future = doc.delete();
     cx.jobs.add(Job::new(future));
 
+    helix_lsp::block_on(cx.jobs.finish())?;
     let doc_id = view!(cx.editor).doc;
     cx.editor.close_document(doc_id, true)?;
 
