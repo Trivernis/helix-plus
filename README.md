@@ -18,6 +18,7 @@ And others I forgot about...
 - Added an auto highlight for files in the tree explorer when jumping through opened buffers 
 - Changed some default settings (enabling bufferline, indent guides, the embedded explorer, cursor modes etc.)
 - Added a `--show-explorer` cli flag to open the file explorer on startup (useful for embedded explorer mode)
+- Added a `delete` (aliases `rm`, `del`) command to delete the file associated with the current buffer
 
 - - -
 

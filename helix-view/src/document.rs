@@ -491,6 +491,21 @@ impl Document {
         Some(fut.boxed())
     }
 
+    /// Deletes the file associated with this document
+    pub fn delete(&mut self) -> impl Future<Output = Result<(), anyhow::Error>> {
+        let path = self
+            .path()
+            .expect("Cannot delete with no path set!")
+            .clone();
+
+        async move {
+            use tokio::fs;
+            fs::remove_file(path).await?;
+
+            Ok(())
+        }
+    }
+
     pub fn save(&mut self, force: bool) -> impl Future<Output = Result<(), anyhow::Error>> {
         self.save_impl::<futures_util::future::Ready<_>>(None, force)
     }

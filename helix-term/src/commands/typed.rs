@@ -232,6 +232,30 @@ fn buffer_previous(
     Ok(())
 }
 
+fn delete(
+    cx: &mut compositor::Context,
+    _args: &[Cow<str>],
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let doc = doc_mut!(cx.editor);
+
+    if doc.path().is_none() {
+        bail!("cannot delete a buffer with no associated file on the disk");
+    }
+
+    let future = doc.delete();
+    cx.jobs.add(Job::new(future));
+
+    let doc_id = view!(cx.editor).doc;
+    cx.editor.close_document(doc_id, true)?;
+
+    Ok(())
+}
+
 fn write_impl(
     cx: &mut compositor::Context,
     path: Option<&Cow<str>>,
@@ -1657,6 +1681,13 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
             doc: "Create a new scratch buffer.",
             fun: new_file,
             completer: Some(completers::filename),
+        },
+        TypableCommand {
+            name: "delete",
+            aliases: &["remove", "rm", "del"],
+            doc: "Deletes the file associated with the current buffer",
+            fun: delete,
+            completer: None,
         },
         TypableCommand {
             name: "format",
