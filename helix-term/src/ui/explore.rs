@@ -11,9 +11,10 @@ use helix_view::{
     input::{Event, KeyEvent},
     Editor,
 };
-use std::borrow::Cow;
-use std::cmp::Ordering;
+use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::{Path, PathBuf};
+use std::{borrow::Cow, sync::mpsc::channel};
+use std::{cmp::Ordering, sync::mpsc::Receiver};
 use tui::{
     buffer::Buffer as Surface,
     text::{Span, Spans},
@@ -238,39 +239,6 @@ impl TreeItem for FileInfo {
     }
 }
 
-// #[derive(Default, Debug, Clone)]
-// struct PathState {
-//     root: PathBuf,
-//     sub_items: Vec<FileInfo>,
-//     selected: usize,
-//     save_view: (usize, usize), // (selected, row)
-//     row: usize,
-//     col: usize,
-//     max_len: usize,
-// }
-
-// impl PathState {
-
-//     fn mkdir(&mut self, dir: &str) -> Result<()> {
-//         self.new_path(dir, FileType::Dir)
-//     }
-
-//     fn create_file(&mut self, f: &str) -> Result<()> {
-//         self.new_path(f, FileType::File)
-//     }
-
-//     fn remove_current_file(&mut self) -> Result<()> {
-//         let item = &self.sub_items[self.selected];
-//         std::fs::remove_file(item.path_with_root(&self.root))?;
-//         self.sub_items.remove(self.selected);
-//         if self.selected >= self.sub_items.len() {
-//             self.selected = self.sub_items.len() - 1;
-//         }
-//         Ok(())
-//     }
-
-// }
-
 #[derive(Clone, Copy, Debug)]
 enum PromptAction {
     Search(bool), // search next/search pre
@@ -304,12 +272,17 @@ pub struct Explorer {
     on_next_key: Option<Box<dyn FnMut(&mut Context, &mut Self, &KeyEvent) -> EventResult>>,
     #[allow(clippy::type_complexity)]
     repeat_motion: Option<Box<dyn FnMut(&mut Self, PromptAction, &mut Context) + 'static>>,
+    watcher: RecommendedWatcher,
+    io_events: Receiver<Result<notify::Event, notify::Error>>,
 }
 
 impl Explorer {
     pub fn new(cx: &mut Context) -> Result<Self> {
         let current_root = std::env::current_dir().unwrap_or_else(|_| "./".into());
         let items = Self::get_items(current_root.clone(), cx)?;
+        let (mut watcher, receiver) = Self::create_watcher()?;
+        watcher.watch(&current_root, RecursiveMode::Recursive)?;
+
         Ok(Self {
             tree: Tree::build_tree(items)
                 .with_enter_fn(Self::toggle_current)
@@ -318,6 +291,8 @@ impl Explorer {
             repeat_motion: None,
             prompt: None,
             on_next_key: None,
+            watcher,
+            io_events: receiver,
         })
     }
 
@@ -339,24 +314,19 @@ impl Explorer {
             .with_enter_fn(Self::toggle_current)
             .with_folded_fn(Self::fold_current);
         tree.insert_current_level(parent);
+        let (mut watcher, receiver) = Self::create_watcher()?;
+        watcher.watch(&current_root, RecursiveMode::Recursive)?;
+
         Ok(Self {
             tree,
             state: State::new(true, current_root),
             repeat_motion: None,
             prompt: None,
             on_next_key: None,
+            watcher,
+            io_events: receiver,
         })
-        // let mut root = vec![, FileInfo::root(p)];
     }
-
-    // pub fn new_with_uri(uri: String) -> Result<Self> {
-    //     // support remote file?
-
-    //     let p = Path::new(&uri);
-    //     ensure!(p.exists(), "path: {uri} is not exist");
-    //     ensure!(p.is_dir(), "path: {uri} is not dir");
-    //     Ok(Self::default().with_list(get_sub(p, None)?))
-    // }
 
     pub fn focus(&mut self) {
         self.state.focus = true
@@ -379,6 +349,24 @@ impl Explorer {
         }
         items.extend(childs);
         Ok(items)
+    }
+
+    pub fn handle_changes(&mut self, cx: &mut Context) -> Result<()> {
+        if let Ok(o) = self.io_events.try_recv() {
+            match o {
+                Ok(_) => self.refresh(cx),
+                Err(e) => Err(e.into()),
+            }
+        } else {
+            Ok(())
+        }
+    }
+
+    fn refresh(&mut self, cx: &mut Context) -> Result<()> {
+        let items = Self::get_items(self.state.current_root.clone(), cx)?;
+        self.tree.replace_with_new_items(items);
+
+        Ok(())
     }
 
     fn render_preview(&mut self, area: Rect, surface: &mut Surface, editor: &Editor) {
@@ -420,6 +408,28 @@ impl Explorer {
                     );
                 })
         }
+    }
+
+    fn watch(&mut self, path: &Path) -> Result<()> {
+        self.watcher.watch(path, RecursiveMode::Recursive)?;
+
+        Ok(())
+    }
+
+    fn unwatch(&mut self, path: &Path) -> Result<()> {
+        self.watcher.unwatch(path)?;
+
+        Ok(())
+    }
+
+    fn create_watcher() -> Result<(
+        RecommendedWatcher,
+        Receiver<Result<notify::Event, notify::Error>>,
+    )> {
+        let (tx, rx) = channel();
+        let watcher = RecommendedWatcher::new(tx, Config::default())?;
+
+        Ok((watcher, rx))
     }
 
     fn new_search_prompt(&mut self, search_next: bool) {

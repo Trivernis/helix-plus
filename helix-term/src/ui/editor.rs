@@ -1370,6 +1370,7 @@ impl Component for EditorView {
 
         if let Some(explore) = self.explorer.as_mut() {
             if !explore.content.is_focus() && config.explorer.is_embed() {
+                explore.content.handle_changes(cx).unwrap();
                 let current_doc = view!(cx.editor).doc;
                 let current_doc = cx.editor.document(current_doc).unwrap();
                 if let Some(path) = current_doc.path() {
