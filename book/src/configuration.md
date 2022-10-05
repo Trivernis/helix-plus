@@ -232,10 +232,11 @@ Sets explorer side width and style.
 
 Options for rendering vertical indent guides.
 
-| Key         | Description                                             | Default |
-| ---         | ---                                                     | ---     |
-| `render`    | Whether to render indent guides.                        | `false` |
-| `character` | Literal character to use for rendering the indent guide | `│`     |
+| Key         | Description                                                  | Default |
+| ---         | ---                                                          | ---     |
+| `render`    | Whether to render indent guides.                             | `false` |
+| `character` | Literal character to use for rendering the indent guide      | `│`     |
+| `rainbow`   | Whether or not the indent guides shall have changing colors. | `false` |
 
 Example:
 
@@ -243,6 +244,7 @@ Example:
 [editor.indent-guides]
 render = true
 character = "╎"
+rainbow = true
 ```
 
 ### `[editor.explorer]` Section

@@ -595,6 +595,7 @@ impl Default for WhitespaceCharacters {
 pub struct IndentGuidesConfig {
     pub render: bool,
     pub character: char,
+    pub rainbow: bool,
 }
 
 impl Default for IndentGuidesConfig {
@@ -602,6 +603,7 @@ impl Default for IndentGuidesConfig {
         Self {
             render: true,
             character: '│',
+            rainbow: false,
         }
     }
 }

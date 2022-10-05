@@ -443,11 +443,18 @@ impl EditorView {
             // extra loops if the code is deeply nested.
 
             for i in starting_indent..(indent_level / tab_width as u16) {
+                let style = if config.indent_guides.rainbow {
+                    let color_index = i as usize % theme.rainbow_length();
+                    indent_guide_style.patch(theme.get(&format!("rainbow.{}", color_index)))
+                } else {
+                    indent_guide_style
+                };
+
                 surface.set_string(
                     viewport.x + (i * tab_width as u16) - offset.col as u16,
                     viewport.y + line,
                     &indent_guide_char,
-                    indent_guide_style,
+                    style,
                 );
             }
         };
