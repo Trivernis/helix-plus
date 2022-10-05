@@ -585,16 +585,16 @@ impl<T: TreeItem> Tree<T> {
         let count = std::mem::replace(&mut self.count, 0);
         match key_event.into() {
             key!(i @ '0'..='9') => self.count = i.to_digit(10).unwrap() as usize + count * 10,
-            key!('k') | shift!(Tab) | key!(Up) | ctrl!('k') => self.move_up(1.max(count)),
-            key!('j') | key!(Tab) | key!(Down) | ctrl!('j') => self.move_down(1.max(count)),
+            key!('k') | shift!(Tab) | key!(Up) => self.move_up(1.max(count)),
+            key!('j') | key!(Tab) | key!(Down) => self.move_down(1.max(count)),
             key!('z') => self.fold_current_level(),
             key!('h') => self.move_left(1.max(count)),
             key!('l') => self.move_right(1.max(count)),
             shift!('G') => self.move_down(usize::MAX / 2),
             key!(Enter) => self.on_enter(cx, params),
             key!(' ') => self.on_enter(cx, params),
-            ctrl!('d') => self.move_down_half_page(),
-            ctrl!('u') => self.move_up_half_page(),
+            ctrl!('d') | ctrl!('j') => self.move_down_half_page(),
+            ctrl!('u') | ctrl!('k') => self.move_up_half_page(),
             shift!('D') => self.move_down_page(),
             shift!('U') => self.move_up_page(),
             key!('g') => {

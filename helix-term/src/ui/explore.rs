@@ -94,7 +94,13 @@ impl FileInfo {
         match self.file_type {
             FileType::Parent => "..".into(),
             FileType::Placeholder => "---".into(),
-            FileType::Root => return format!("{}", self.path.display()).into(),
+            FileType::Root => {
+                if let Some(path) = self.path.iter().last() {
+                    format!("- {} -", path.to_string_lossy()).into()
+                } else {
+                    Cow::from("/")
+                }
+            }
             FileType::File | FileType::Exe | FileType::Dir => self
                 .path
                 .file_name()
@@ -238,39 +244,6 @@ impl TreeItem for FileInfo {
     }
 }
 
-// #[derive(Default, Debug, Clone)]
-// struct PathState {
-//     root: PathBuf,
-//     sub_items: Vec<FileInfo>,
-//     selected: usize,
-//     save_view: (usize, usize), // (selected, row)
-//     row: usize,
-//     col: usize,
-//     max_len: usize,
-// }
-
-// impl PathState {
-
-//     fn mkdir(&mut self, dir: &str) -> Result<()> {
-//         self.new_path(dir, FileType::Dir)
-//     }
-
-//     fn create_file(&mut self, f: &str) -> Result<()> {
-//         self.new_path(f, FileType::File)
-//     }
-
-//     fn remove_current_file(&mut self) -> Result<()> {
-//         let item = &self.sub_items[self.selected];
-//         std::fs::remove_file(item.path_with_root(&self.root))?;
-//         self.sub_items.remove(self.selected);
-//         if self.selected >= self.sub_items.len() {
-//             self.selected = self.sub_items.len() - 1;
-//         }
-//         Ok(())
-//     }
-
-// }
-
 #[derive(Clone, Copy, Debug)]
 enum PromptAction {
     Search(bool), // search next/search pre
@@ -346,17 +319,7 @@ impl Explorer {
             prompt: None,
             on_next_key: None,
         })
-        // let mut root = vec![, FileInfo::root(p)];
     }
-
-    // pub fn new_with_uri(uri: String) -> Result<Self> {
-    //     // support remote file?
-
-    //     let p = Path::new(&uri);
-    //     ensure!(p.exists(), "path: {uri} is not exist");
-    //     ensure!(p.is_dir(), "path: {uri} is not dir");
-    //     Ok(Self::default().with_list(get_sub(p, None)?))
-    // }
 
     pub fn focus(&mut self) {
         self.state.focus = true
@@ -371,7 +334,7 @@ impl Explorer {
     }
 
     fn get_items(p: PathBuf, cx: &mut Context) -> Result<Vec<FileInfo>> {
-        let mut items = vec![FileInfo::parent(p.as_path())];
+        let mut items = Vec::new();
         let root = FileInfo::root(p);
         let childs = root.get_childs()?;
         if cx.editor.config().explorer.is_tree() {
@@ -510,7 +473,7 @@ impl Explorer {
     }
 
     fn fold_current(item: &mut FileInfo, _cx: &mut Context, _state: &mut State) {
-        if item.path.is_dir() {
+        if item.path.is_dir() && item.file_type != FileType::Root {
             item.expanded = false;
         }
     }
@@ -618,15 +581,6 @@ impl Explorer {
             };
             let area = side_area.clip_top(list_area.height).clip_right(1);
             surface.clear_with(area, statusline);
-            // surface.set_string_truncated(
-            //     area.x,
-            //     area.y,
-            //     &self.path_state.root.to_string_lossy(),
-            //     area.width as usize,
-            //     |_| statusline,
-            //     true,
-            //     true,
-            // );
         }
 
         if self.is_focus() {
@@ -850,19 +804,6 @@ impl Component for Explorer {
                     self.repeat_motion = Some(repeat_motion);
                 }
             }
-            key!('b') => {
-                if let Some(p) = self.state.current_root.parent() {
-                    match Self::get_items(p.to_path_buf(), cx) {
-                        Ok(items) => {
-                            self.state.current_root = p.to_path_buf();
-                            self.tree = Tree::build_tree(items)
-                                .with_enter_fn(Self::toggle_current)
-                                .with_folded_fn(Self::fold_current);
-                        }
-                        Err(e) => cx.editor.set_error(format!("{e}")),
-                    }
-                }
-            }
             key!('f') => self.new_filter_prompt(),
             key!('/') => self.new_search_prompt(true),
             key!('?') => self.new_search_prompt(false),
@@ -969,7 +910,6 @@ fn render_block(
     if let Some(style) = border_style {
         block = block.border_style(style);
     }
-    //let block = Block::default();
     let inner = block.inner(area);
     block.render(area, surface);
     inner
