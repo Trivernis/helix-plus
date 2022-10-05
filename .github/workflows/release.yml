@@ -110,14 +110,6 @@ jobs:
         if: "matrix.cross"
         run: cargo install cross --git https://github.com/cross-rs/cross.git --rev 47df5c76e7cba682823a0b6aa6d95c17b31ba63a
 
-      - name: Run cargo test
-        uses: actions-rs/cargo@v1
-        if: "!matrix.skip_tests"
-        with:
-          use-cross: ${{ matrix.cross }}
-          command: test
-          args: --release --locked --target ${{ matrix.target }} --workspace
-
       - name: Set profile.release.strip = true
         shell: bash
         run: |
