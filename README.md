@@ -4,10 +4,11 @@
 
 # Merged PRs
 
- - [File explorer and tree helper](https://github.com/helix-editor/helix/pull/2377)
-   - [with Icons](https://github.com/r0l1/helix/tree/tree_explorer_icons)
- - [Add LSP workspace command picker](https://github.com/helix-editor/helix/pull/3140)
- - [completion fix](https://github.com/helix-editor/helix/pull/1819)
+- [File explorer and tree helper](https://github.com/helix-editor/helix/pull/2377)
+  - [with Icons](https://github.com/r0l1/helix/tree/tree_explorer_icons)
+- [Add LSP workspace command picker](https://github.com/helix-editor/helix/pull/3140)
+- [completion fix](https://github.com/helix-editor/helix/pull/1819)
+- [Add rainbow indentation guides](https://github.com/helix-editor/helix/pull/4056)
 
 And others I forgot about...
 
@@ -19,6 +20,7 @@ And others I forgot about...
 - Changed some default settings (enabling bufferline, indent guides, the embedded explorer, cursor modes etc.)
 - Added a `--show-explorer` cli flag to open the file explorer on startup (useful for embedded explorer mode)
 - Added a `delete` (aliases `rm`, `del`) command to delete the file associated with the current buffer
+- Changed keybind `<space> E` to close the explorer instead of toggling the recursion one
 
 - - -
 
