@@ -38,13 +38,14 @@ on unix operating systems.
 
 | Key | Description | Default |
 |--|--|---------|
-| `scrolloff` | Number of lines of padding around the edge of the screen when scrolling. | `3` |
+| `scrolloff` | Number of lines of padding around the edge of the screen when scrolling. | `5` |
 | `mouse` | Enable mouse mode. | `true` |
 | `middle-click-paste` | Middle click paste support. | `true` |
 | `scroll-lines` | Number of lines to scroll per scroll wheel step. | `3` |
 | `shell` | Shell to use when running external commands. | Unix: `["sh", "-c"]`<br/>Windows: `["cmd", "/C"]` |
 | `line-number` | Line number display: `absolute` simply shows each line's number, while `relative` shows the distance from the current line. When unfocused or in insert mode, `relative` will still show absolute line numbers. | `absolute` |
 | `cursorline` | Highlight all lines with a cursor. | `false` |
+| `cursorcolumn` | Highlight all columns with a cursor. | `false` |
 | `gutters` | Gutters to display: Available are `diagnostics` and `line-numbers` and `spacer`, note that `diagnostics` also includes other features like breakpoints, 1-width padding will be inserted if gutters is non-empty | `["diagnostics", "line-numbers"]` |
 | `auto-completion` | Enable automatic pop up of auto-completion. | `true` |
 | `auto-format` | Enable automatic formatting on save. | `true` |
@@ -251,24 +252,12 @@ Sets explorer side width and style.
 
 Options for rendering vertical indent guides.
 
-<<<<<<< HEAD
 | Key         | Description                                                  | Default |
 | ---         | ---                                                          | ---     |
-| `render`    | Whether to render indent guides.                             | `false` |
+| `render`    | Whether to render indent guides.                             | `true` |
 | `character` | Literal character to use for rendering the indent guide      | `│`     |
 | `rainbow`   | Whether or not the indent guides shall have changing colors. | `false` |
-||||||| 60aa7d36
-| Key         | Description                                             | Default |
-| ---         | ---                                                     | ---     |
-| `render`    | Whether to render indent guides.                        | `false` |
-| `character` | Literal character to use for rendering the indent guide | `│`     |
-=======
-| Key           | Description                                             | Default |
-| ---           | ---                                                     | ---     |
-| `render`      | Whether to render indent guides.                        | `false` |
-| `character`   | Literal character to use for rendering the indent guide | `│`     |
-| `skip-levels` | Number of indent levels to skip                         | `0`     |
->>>>>>> seperate_code_action
+| `skip-levels` | Number of indent levels to skip                            | `0`     |
 
 Example:
 
@@ -276,12 +265,8 @@ Example:
 [editor.indent-guides]
 render = true
 character = "╎"
-<<<<<<< HEAD
 rainbow = true
-||||||| 60aa7d36
-=======
 skip-levels = 1
->>>>>>> seperate_code_action
 ```
 
 ### `[editor.explorer]` Section

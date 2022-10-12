@@ -2,7 +2,10 @@ use std::ops::Deref;
 
 use super::*;
 
-use helix_view::editor::{Action, CloseError, ConfigEvent};
+use helix_view::{
+    apply_transaction,
+    editor::{Action, CloseError, ConfigEvent},
+};
 use ui::completers::{self, Completer};
 
 #[derive(Clone)]
@@ -487,7 +490,7 @@ fn set_line_ending(
             }
         }),
     );
-    doc.apply(&transaction, view.id);
+    apply_transaction(&transaction, doc, view);
     doc.append_changes_to_history(view.id);
 
     Ok(())
@@ -908,7 +911,7 @@ fn replace_selections_with_clipboard_impl(
                 (range.from(), range.to(), Some(contents.as_str().into()))
             });
 
-            doc.apply(&transaction, view.id);
+            apply_transaction(&transaction, doc, view);
             doc.append_changes_to_history(view.id);
             Ok(())
         }
@@ -1029,7 +1032,7 @@ fn reload(
 
     let scrolloff = cx.editor.config().scrolloff;
     let (view, doc) = current!(cx.editor);
-    doc.reload(view.id).map(|_| {
+    doc.reload(view).map(|_| {
         view.ensure_cursor_in_view(doc, scrolloff);
     })
 }
@@ -1423,7 +1426,7 @@ fn sort_impl(
             .map(|(s, fragment)| (s.from(), s.to(), Some(fragment))),
     );
 
-    doc.apply(&transaction, view.id);
+    apply_transaction(&transaction, doc, view);
     doc.append_changes_to_history(view.id);
 
     Ok(())
@@ -1467,7 +1470,7 @@ fn reflow(
         (range.from(), range.to(), Some(reflowed_text))
     });
 
-    doc.apply(&transaction, view.id);
+    apply_transaction(&transaction, doc, view);
     doc.append_changes_to_history(view.id);
     view.ensure_cursor_in_view(doc, scrolloff);
 
