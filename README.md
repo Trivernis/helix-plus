@@ -22,6 +22,7 @@ And others I forgot about...
 - Added a `--show-explorer` cli flag to open the file explorer on startup (useful for embedded explorer mode)
 - Added a `delete` (aliases `rm`, `del`) command to delete the file associated with the current buffer
 - Changed keybind `<space> E` to close the explorer instead of toggling the recursion one
+- Added a completion chars setting that triggers autocomplete when typing one of those chars
 
 - - -
 
