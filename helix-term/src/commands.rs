@@ -2942,9 +2942,11 @@ pub mod insert {
         use helix_core::chars::char_is_word;
         let mut iter = text.chars_at(cursor);
         iter.reverse();
+
         for _ in 0..config.completion_trigger_len {
             match iter.next() {
                 Some(c) if char_is_word(c) => {}
+                Some(c) if config.completion_trigger_chars.contains(&c) => {}
                 _ => return,
             }
         }

@@ -197,6 +197,7 @@ pub struct Config {
     )]
     pub idle_timeout: Duration,
     pub completion_trigger_len: u8,
+    pub completion_trigger_chars: Vec<char>,
     /// Whether to display infoboxes. Defaults to true.
     pub auto_info: bool,
     pub file_picker: FilePickerConfig,
@@ -670,6 +671,7 @@ impl Default for Config {
             indent_guides: IndentGuidesConfig::default(),
             color_modes: true,
             explorer: ExplorerConfig::default(),
+            completion_trigger_chars: vec!['.'],
         }
     }
 }
