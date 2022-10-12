@@ -9,6 +9,7 @@
 - [Add LSP workspace command picker](https://github.com/helix-editor/helix/pull/3140)
 - [completion fix](https://github.com/helix-editor/helix/pull/1819)
 - [Add rainbow indentation guides](https://github.com/helix-editor/helix/pull/4056)
+- [Improve sorting for inline menu (codeaction + completion)](https://github.com/helix-editor/helix/pull/4134)
 
 And others I forgot about...
 
