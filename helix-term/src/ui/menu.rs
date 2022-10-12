@@ -74,6 +74,7 @@ impl<T: Item> Menu<T> {
     // rendering)
     pub fn new(
         options: Vec<T>,
+        sort: bool,
         editor_data: <T as Item>::Data,
         callback_fn: impl Fn(&mut Editor, Option<&T>, MenuEvent) + 'static,
     ) -> Self {
@@ -91,8 +92,12 @@ impl<T: Item> Menu<T> {
             recalculate: true,
         };
 
-        // TODO: scoring on empty input should just use a fastpath
-        menu.score("");
+        if sort {
+            // TODO: scoring on empty input should just use a fastpath
+            menu.score("");
+        } else {
+            menu.matches = (0..menu.options.len()).map(|i| (i, 0)).collect();
+        }
 
         menu
     }
@@ -112,10 +117,7 @@ impl<T: Item> Menu<T> {
                         .map(|score| (index, score))
                 }),
         );
-        // matches.sort_unstable_by_key(|(_, score)| -score);
-        self.matches.sort_unstable_by_key(|(index, _score)| {
-            self.options[*index].sort_text(&self.editor_data)
-        });
+        self.matches.sort_unstable_by_key(|(_, score)| -score);
 
         // reset cursor position
         self.cursor = None;

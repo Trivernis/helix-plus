@@ -14,6 +14,8 @@ mod statusline;
 mod text;
 mod tree;
 
+use crate::compositor::{Component, Compositor};
+use crate::job;
 pub use completion::Completion;
 pub use editor::EditorView;
 pub use explore::Explorer;
@@ -28,7 +30,7 @@ pub use tree::{Tree, TreeItem, TreeOp};
 
 use helix_core::regex::Regex;
 use helix_core::regex::RegexBuilder;
-use helix_view::{Document, Editor, View};
+use helix_view::Editor;
 
 use std::path::PathBuf;
 
@@ -63,7 +65,7 @@ pub fn regex_prompt(
     prompt: std::borrow::Cow<'static, str>,
     history_register: Option<char>,
     completion_fn: impl FnMut(&Editor, &str) -> Vec<prompt::Completion> + 'static,
-    fun: impl Fn(&mut View, &mut Document, Regex, PromptEvent) + 'static,
+    fun: impl Fn(&mut Editor, Regex, PromptEvent) + 'static,
 ) {
     let (view, doc) = current!(cx.editor);
     let doc_id = view.doc;
@@ -110,11 +112,42 @@ pub fn regex_prompt(
                                 view.jumps.push((doc_id, snapshot.clone()));
                             }
 
-                            fun(view, doc, regex, event);
+                            fun(cx.editor, regex, event);
 
+                            let (view, doc) = current!(cx.editor);
                             view.ensure_cursor_in_view(doc, config.scrolloff);
                         }
-                        Err(_err) => (), // TODO: mark command line as error
+                        Err(err) => {
+                            let (view, doc) = current!(cx.editor);
+                            doc.set_selection(view.id, snapshot.clone());
+                            view.offset = offset_snapshot;
+
+                            if event == PromptEvent::Validate {
+                                let callback = async move {
+                                    let call: job::Callback = Box::new(
+                                        move |_editor: &mut Editor, compositor: &mut Compositor| {
+                                            let contents = Text::new(format!("{}", err));
+                                            let size = compositor.size();
+                                            let mut popup = Popup::new("invalid-regex", contents)
+                                                .position(Some(helix_core::Position::new(
+                                                    size.height as usize - 2, // 2 = statusline + commandline
+                                                    0,
+                                                )))
+                                                .auto_close(true);
+                                            popup.required_size((size.width, size.height));
+
+                                            compositor.replace_or_push("invalid-regex", popup);
+                                        },
+                                    );
+                                    Ok(call)
+                                };
+
+                                cx.jobs.callback(callback);
+                            } else {
+                                // Update
+                                // TODO: mark command line as error
+                            }
+                        }
                     }
                 }
             }
