@@ -66,6 +66,49 @@
 "ui.explorer.unfocus" = { bg = "comment" }
 
 rainbow = ["#7c5ea3", "#9c5b95",  "#9c5e80", "#6b4466"]
+"ui.selection" = { bg = "#540099" }
+"ui.selection.primary" = { bg = "#540099" }
+# TODO: namespace ui.cursor as ui.selection.cursor?
+"ui.cursor.select" = { bg = "delta" }
+"ui.cursor.insert" = { bg = "white" }
+"ui.cursor.match" = { fg = "#212121", bg = "#6C6999" }
+"ui.cursor" = { modifiers = ["reversed"] }
+"ui.cursorline.primary" = { bg = "bossanova" }
+"ui.highlight" = { bg = "bossanova" }
+
+"ui.menu" = { fg = "lavender", bg = "revolver" }
+"ui.menu.selected" = { fg = "revolver", bg = "white" }
+"ui.menu.scroll" = { fg = "lavender", bg = "comet" }
+
+diagnostic = { modifiers = ["underlined"] }
+# "diagnostic.hint" = { fg = "revolver", bg = "lilac" }
+# "diagnostic.info" = { fg = "revolver", bg = "lavender" }
+# "diagnostic.warning" = { fg = "revolver", bg = "honey" }
+# "diagnostic.error" = { fg = "revolver", bg = "apricot" }
+
+"ui.selection" = { bg = "#540099" }
+"ui.selection.primary" = { bg = "#540099" }
+# TODO: namespace ui.cursor as ui.selection.cursor?
+"ui.cursor.select" = { bg = "delta" }
+"ui.cursor.insert" = { bg = "white" }
+"ui.cursor.match" = { fg = "#212121", bg = "#6C6999" }
+"ui.cursor" = { modifiers = ["reversed"] }
+"ui.cursorline.primary" = { bg = "bossanova" }
+"ui.highlight" = { bg = "bossanova" }
+
+"ui.menu" = { fg = "lavender", bg = "revolver" }
+"ui.menu.selected" = { fg = "revolver", bg = "white" }
+"ui.menu.scroll" = { fg = "lavender", bg = "comet" }
+
+"diagnostic.hint" = { underline = { color = "silver", style = "curl" } }
+"diagnostic.info" = { underline = { color = "delta", style = "curl" } }
+"diagnostic.warning" = { underline = { color = "lightning", style = "curl" } }
+"diagnostic.error" = { underline = { color = "apricot", style = "curl" } }
+
+warning = "lightning"
+error = "apricot"
+info = "delta"
+hint = "silver"
 
 [palette]
 background = "#3A2A4D"

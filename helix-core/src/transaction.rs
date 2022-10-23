@@ -394,10 +394,12 @@ impl ChangeSet {
         }
 
         if pos > old_pos {
-            panic!(
+            log::error!(
                 "Position {} is out of range for changeset len {}!",
-                pos, old_pos
-            )
+                pos,
+                old_pos
+            );
+            return old_pos;
         }
         new_pos
     }

@@ -78,11 +78,12 @@ impl<T: Item> Menu<T> {
         editor_data: <T as Item>::Data,
         callback_fn: impl Fn(&mut Editor, Option<&T>, MenuEvent) + 'static,
     ) -> Self {
+        let matches = (0..options.len()).map(|i| (i, 0)).collect();
         let mut menu = Self {
             options,
             editor_data,
             matcher: Box::new(Matcher::default()),
-            matches: Vec::new(),
+            matches,
             cursor: None,
             widths: Vec::new(),
             callback_fn: Box::new(callback_fn),
@@ -110,7 +111,7 @@ impl<T: Item> Menu<T> {
                 .iter()
                 .enumerate()
                 .filter_map(|(index, option)| {
-                    let text: String = option.filter_text(&self.editor_data).into();
+                    let text = option.filter_text(&self.editor_data);
                     // TODO: using fuzzy_indices could give us the char idx for match highlighting
                     self.matcher
                         .fuzzy_match(&text, pattern)
@@ -212,6 +213,14 @@ impl<T: Item> Menu<T> {
             self.matches
                 .get(cursor)
                 .map(|(index, _score)| &self.options[*index])
+        })
+    }
+
+    pub fn selection_mut(&mut self) -> Option<&mut T> {
+        self.cursor.and_then(|cursor| {
+            self.matches
+                .get(cursor)
+                .map(|(index, _score)| &mut self.options[*index])
         })
     }
 

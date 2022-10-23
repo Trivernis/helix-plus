@@ -190,6 +190,8 @@ pub fn ensure_grapheme_boundary_next(slice: RopeSlice, char_idx: usize) -> usize
 pub fn ensure_grapheme_boundary_prev(slice: RopeSlice, char_idx: usize) -> usize {
     if char_idx == slice.len_chars() {
         char_idx
+    } else if char_idx > slice.len_chars() {
+        slice.len_chars()
     } else {
         prev_grapheme_boundary(slice, char_idx + 1)
     }
