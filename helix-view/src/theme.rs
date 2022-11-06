@@ -188,8 +188,8 @@ pub struct Theme {
     styles: HashMap<String, Style>,
     // tree-sitter highlight styles are stored in a Vec to optimize lookups
     scopes: Vec<String>,
-    highlights: Vec<Style>,
     rainbow_length: usize,
+    highlights: Vec<Style>,
 }
 
 impl From<Value> for Theme {
@@ -197,17 +197,13 @@ impl From<Value> for Theme {
         let values: Result<HashMap<String, Value>> =
             toml::from_str(&value.to_string()).context("Failed to load theme");
 
-        let (styles, scopes, highlights) = build_theme_values(values);
-        let rainbow_length = styles
-            .iter()
-            .filter(|s| s.0.starts_with("rainbow."))
-            .count();
+        let (styles, scopes, rainbow_length, highlights) = build_theme_values(values);
 
         Self {
             styles,
             scopes,
-            highlights,
             rainbow_length,
+            highlights,
             ..Default::default()
         }
     }
@@ -275,8 +271,8 @@ impl<'de> Deserialize<'de> for Theme {
         Ok(Self {
             styles,
             scopes,
-            highlights,
             rainbow_length,
+            highlights,
             ..Default::default()
         })
     }
@@ -284,10 +280,11 @@ impl<'de> Deserialize<'de> for Theme {
 
 fn build_theme_values(
     values: Result<HashMap<String, Value>>,
-) -> (HashMap<String, Style>, Vec<String>, Vec<Style>) {
+) -> (HashMap<String, Style>, Vec<String>, usize, Vec<Style>) {
     let mut styles = HashMap::new();
     let mut scopes = Vec::new();
     let mut highlights = Vec::new();
+    let mut rainbow_length = 0;
 
     if let Ok(mut colors) = values {
         // TODO: alert user of parsing failures in editor
@@ -305,6 +302,27 @@ fn build_theme_values(
         styles.reserve(colors.len());
         scopes.reserve(colors.len());
         highlights.reserve(colors.len());
+
+        for (i, style) in colors
+            .remove("rainbow")
+            .and_then(|value| match palette.parse_style_array(value) {
+                Ok(styles) => Some(styles),
+                Err(err) => {
+                    warn!("{}", err);
+                    None
+                }
+            })
+            .unwrap_or_else(Theme::default_rainbow)
+            .iter()
+            .enumerate()
+        {
+            let name = format!("rainbow.{}", i);
+            styles.insert(name.clone(), *style);
+            scopes.push(name);
+            highlights.push(*style);
+            rainbow_length += 1;
+        }
+
         for (name, style_value) in colors {
             let mut style = Style::default();
             if let Err(err) = palette.parse_style(&mut style, style_value) {
@@ -318,7 +336,7 @@ fn build_theme_values(
         }
     }
 
-    (styles, scopes, highlights)
+    (styles, scopes, rainbow_length, highlights)
 }
 impl Theme {
     #[inline]
@@ -372,6 +390,10 @@ impl Theme {
         } else {
             self.rainbow_length
         }
+    }
+
+    pub fn get_rainbow(&self, index: usize) -> Style {
+        self.highlights[index % self.rainbow_length]
     }
 
     pub fn default_rainbow() -> Vec<Style> {

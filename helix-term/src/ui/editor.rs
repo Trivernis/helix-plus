@@ -19,7 +19,7 @@ use helix_core::{
 use helix_view::{
     apply_transaction,
     document::{Mode, SCRATCH_BUFFER_NAME},
-    editor::{CompleteAction, CursorShapeConfig},
+    editor::{CompleteAction, CursorShapeConfig, RainbowIndentOptions},
     graphics::{Color, CursorKind, Modifier, Rect, Style},
     input::{KeyEvent, MouseButton, MouseEvent, MouseEventKind},
     keyboard::{KeyCode, KeyModifiers},
@@ -471,15 +471,22 @@ impl EditorView {
             let starting_indent =
                 (offset.col / tab_width) + config.indent_guides.skip_levels as usize;
 
+            let modifier = if config.indent_guides.rainbow == RainbowIndentOptions::Dim {
+                Modifier::DIM
+            } else {
+                Modifier::empty()
+            };
+
             for i in starting_indent..(indent_level / tab_width) {
-                let style = if config.indent_guides.rainbow {
-                    let color_index = i as usize % theme.rainbow_length();
-                    indent_guide_style.patch(theme.get(&format!("rainbow.{}", color_index)))
+                let style = if config.indent_guides.rainbow != RainbowIndentOptions::None {
+                    indent_guide_style
+                        .patch(theme.get_rainbow(i as usize))
+                        .add_modifier(modifier)
                 } else {
                     indent_guide_style
                 };
                 surface.set_string(
-                    viewport.x + ((i * tab_width) - offset.col) as u16,
+                    viewport.x + (i as u16 * tab_width as u16) - offset.col as u16,
                     viewport.y + line,
                     &indent_guide_char,
                     style,

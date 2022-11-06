@@ -254,12 +254,40 @@ Sets explorer side width and style.
 
 Options for rendering vertical indent guides.
 
+<<<<<<< HEAD
 | Key         | Description                                                  | Default |
 | ---         | ---                                                          | ---     |
 | `render`    | Whether to render indent guides.                             | `true` |
 | `character` | Literal character to use for rendering the indent guide      | `│`     |
 | `rainbow`   | Whether or not the indent guides shall have changing colors. | `false` |
 | `skip-levels` | Number of indent levels to skip                            | `0`     |
+||||||| merged common ancestors
+<<<<<<<<< Temporary merge branch 1
+| Key         | Description                                                  | Default |
+| ---         | ---                                                          | ---     |
+| `render`    | Whether to render indent guides.                             | `false` |
+| `character` | Literal character to use for rendering the indent guide      | `│`     |
+| `rainbow`   | Whether or not the indent guides shall have changing colors. | `false` |
+||||||||| 60aa7d36
+| Key         | Description                                             | Default |
+| ---         | ---                                                     | ---     |
+| `render`    | Whether to render indent guides.                        | `false` |
+| `character` | Literal character to use for rendering the indent guide | `│`     |
+=========
+| Key           | Description                                             | Default |
+| ---           | ---                                                     | ---     |
+| `render`      | Whether to render indent guides.                        | `false` |
+| `character`   | Literal character to use for rendering the indent guide | `│`     |
+| `skip-levels` | Number of indent levels to skip                         | `0`     |
+>>>>>>>>> Temporary merge branch 2
+=======
+| Key           | Description                                                                                     | Default |
+| ---           | ---                                                                                             | ---     |
+| `render`      | Whether to render indent guides.                                                                | `false` |
+| `character`   | Literal character to use for rendering the indent guide                                         | `│`     |
+| `rainbow`     | Whether or not the indent guides shall have changing colors. It can be `none`, `dim` or `normal`| `none`  |
+| `skip-levels` | Number of indent levels to skip                                                                 | `0`     |
+>>>>>>> colored-indent-guides
 
 Example:
 
@@ -267,7 +295,18 @@ Example:
 [editor.indent-guides]
 render = true
 character = "╎"
+<<<<<<< HEAD
 rainbow = true
+||||||| merged common ancestors
+rainbow = true
+||||||||| 60aa7d36
+character = "╎"
+=========
+character = "╎" # Some characters that work well: "▏", "┆", "┊", "⸽"
+=======
+rainbow = "normal"
+character = "╎" # Some characters that work well: "▏", "┆", "┊", "⸽"
+>>>>>>> colored-indent-guides
 skip-levels = 1
 ```
 
