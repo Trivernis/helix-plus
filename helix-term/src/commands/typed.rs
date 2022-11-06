@@ -797,16 +797,21 @@ fn theme(
             };
         }
         PromptEvent::Validate => {
-            let theme_name = args.first().with_context(|| "Theme name not provided")?;
-            let theme = cx
-                .editor
-                .theme_loader
-                .load(theme_name)
-                .with_context(|| "Theme does not exist")?;
-            if !(true_color || theme.is_16_color()) {
-                bail!("Unsupported theme: theme requires true color support");
+            if let Some(theme_name) = args.first() {
+                let theme = cx
+                    .editor
+                    .theme_loader
+                    .load(theme_name)
+                    .with_context(|| "Theme does not exist")?;
+                if !(true_color || theme.is_16_color()) {
+                    bail!("Unsupported theme: theme requires true color support");
+                }
+                cx.editor.set_theme(theme);
+            } else {
+                let name = cx.editor.theme.name().to_string();
+
+                cx.editor.set_status(name);
             }
-            cx.editor.set_theme(theme);
         }
     };
 
@@ -1052,6 +1057,24 @@ fn reload(
     doc.reload(view).map(|_| {
         view.ensure_cursor_in_view(doc, scrolloff);
     })
+}
+
+/// Update the [`Document`] if it has been modified.
+fn update(
+    cx: &mut compositor::Context,
+    args: &[Cow<str>],
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let (_view, doc) = current!(cx.editor);
+    if doc.is_modified() {
+        write(cx, args, event)
+    } else {
+        Ok(())
+    }
 }
 
 fn lsp_restart(
@@ -1880,7 +1903,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         TypableCommand {
             name: "theme",
             aliases: &[],
-            doc: "Change the editor theme.",
+            doc: "Change the editor theme (show current theme if no name specified).",
             fun: theme,
             completer: Some(completers::theme),
         },
@@ -1987,6 +2010,13 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
             aliases: &[],
             doc: "Discard changes and reload from the source file.",
             fun: reload,
+            completer: None,
+        },
+        TypableCommand {
+            name: "update",
+            aliases: &[],
+            doc: "Write changes only if the file has been modified.",
+            fun: update,
             completer: None,
         },
         TypableCommand {
@@ -2192,12 +2222,10 @@ pub(super) fn command_mode(cx: &mut Context) {
             static FUZZY_MATCHER: Lazy<fuzzy_matcher::skim::SkimMatcherV2> =
                 Lazy::new(fuzzy_matcher::skim::SkimMatcherV2::default);
 
-            // we use .this over split_whitespace() because we care about empty segments
-            let parts = input.split(' ').collect::<Vec<&str>>();
-
             // simple heuristic: if there's no just one part, complete command name.
             // if there's a space, per command completion kicks in.
-            if parts.len() <= 1 {
+            // we use .this over split_whitespace() because we care about empty segments
+            if input.split(' ').count() <= 1 {
                 let mut matches: Vec<_> = typed::TYPABLE_COMMAND_LIST
                     .iter()
                     .filter_map(|command| {
@@ -2213,12 +2241,13 @@ pub(super) fn command_mode(cx: &mut Context) {
                     .map(|(name, _)| (0.., name.into()))
                     .collect()
             } else {
+                let parts = shellwords::shellwords(input);
                 let part = parts.last().unwrap();
 
                 if let Some(typed::TypableCommand {
                     completer: Some(completer),
                     ..
-                }) = typed::TYPABLE_COMMAND_MAP.get(parts[0])
+                }) = typed::TYPABLE_COMMAND_MAP.get(&parts[0] as &str)
                 {
                     completer(editor, part)
                         .into_iter()

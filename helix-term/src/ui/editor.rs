@@ -25,7 +25,7 @@ use helix_view::{
     keyboard::{KeyCode, KeyModifiers},
     Document, Editor, Theme, View,
 };
-use std::{borrow::Cow, cmp::min, path::PathBuf};
+use std::{borrow::Cow, cmp::min, num::NonZeroUsize, path::PathBuf};
 
 use tui::buffer::Buffer as Surface;
 
@@ -229,16 +229,16 @@ impl EditorView {
         _theme: &Theme,
     ) -> Box<dyn Iterator<Item = HighlightEvent> + 'doc> {
         let text = doc.text().slice(..);
-        let last_line = std::cmp::min(
-            // Saturating subs to make it inclusive zero indexing.
-            (offset.row + height as usize).saturating_sub(1),
-            doc.text().len_lines().saturating_sub(1),
-        );
 
         let range = {
-            // calculate viewport byte ranges
-            let start = text.line_to_byte(offset.row);
-            let end = text.line_to_byte(last_line + 1);
+            // Calculate viewport byte ranges:
+            // Saturating subs to make it inclusive zero indexing.
+            let last_line = doc.text().len_lines().saturating_sub(1);
+            let last_visible_line = (offset.row + height as usize)
+                .saturating_sub(1)
+                .min(last_line);
+            let start = text.line_to_byte(offset.row.min(last_line));
+            let end = text.line_to_byte(last_visible_line + 1);
 
             start..end
         };
@@ -1025,37 +1025,40 @@ impl EditorView {
             }
             // special handling for repeat operator
             (key!('.'), _) if self.keymaps.pending().is_empty() => {
-                // first execute whatever put us into insert mode
-                self.last_insert.0.execute(cxt);
-                // then replay the inputs
-                for key in self.last_insert.1.clone() {
-                    match key {
-                        InsertEvent::Key(key) => self.insert_mode(cxt, key),
-                        InsertEvent::CompletionApply(compl) => {
-                            let (view, doc) = current!(cxt.editor);
+                for _ in 0..cxt.editor.count.map_or(1, NonZeroUsize::into) {
+                    // first execute whatever put us into insert mode
+                    self.last_insert.0.execute(cxt);
+                    // then replay the inputs
+                    for key in self.last_insert.1.clone() {
+                        match key {
+                            InsertEvent::Key(key) => self.insert_mode(cxt, key),
+                            InsertEvent::CompletionApply(compl) => {
+                                let (view, doc) = current!(cxt.editor);
 
-                            doc.restore(view);
+                                doc.restore(view);
 
-                            let text = doc.text().slice(..);
-                            let cursor = doc.selection(view.id).primary().cursor(text);
+                                let text = doc.text().slice(..);
+                                let cursor = doc.selection(view.id).primary().cursor(text);
 
-                            let shift_position =
-                                |pos: usize| -> usize { pos + cursor - compl.trigger_offset };
+                                let shift_position =
+                                    |pos: usize| -> usize { pos + cursor - compl.trigger_offset };
 
-                            let tx = Transaction::change(
-                                doc.text(),
-                                compl.changes.iter().cloned().map(|(start, end, t)| {
-                                    (shift_position(start), shift_position(end), t)
-                                }),
-                            );
-                            apply_transaction(&tx, doc, view);
-                        }
-                        InsertEvent::TriggerCompletion => {
-                            let (_, doc) = current!(cxt.editor);
-                            doc.savepoint();
+                                let tx = Transaction::change(
+                                    doc.text(),
+                                    compl.changes.iter().cloned().map(|(start, end, t)| {
+                                        (shift_position(start), shift_position(end), t)
+                                    }),
+                                );
+                                apply_transaction(&tx, doc, view);
+                            }
+                            InsertEvent::TriggerCompletion => {
+                                let (_, doc) = current!(cxt.editor);
+                                doc.savepoint();
+                            }
                         }
                     }
                 }
+                cxt.editor.count = None;
             }
             _ => {
                 // set the count

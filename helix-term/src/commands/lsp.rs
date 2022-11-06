@@ -9,7 +9,7 @@ use tui::text::{Span, Spans};
 use super::{align_view, push_jump, Align, Context, Editor, Open};
 
 use helix_core::{path, Selection};
-use helix_view::{apply_transaction, editor::Action, theme::Style};
+use helix_view::{apply_transaction, document::Mode, editor::Action, theme::Style};
 
 use crate::{
     compositor::{self, Compositor},
@@ -57,7 +57,7 @@ impl ui::menu::Item for lsp::Location {
             // allocation, for `to_file_path`, else there will be two (2), with `to_string_lossy`.
             let mut write_path_to_res = || -> Option<()> {
                 let path = self.uri.to_file_path().ok()?;
-                res.push_str(&path.strip_prefix(&cwdir).unwrap_or(&path).to_string_lossy());
+                res.push_str(&path.strip_prefix(cwdir).unwrap_or(&path).to_string_lossy());
                 Some(())
             };
             write_path_to_res();
@@ -670,7 +670,7 @@ pub fn apply_document_resource_op(op: &lsp::ResourceOp) -> std::io::Result<()> {
                 // Create directory if it does not exist
                 if let Some(dir) = path.parent() {
                     if !dir.is_dir() {
-                        fs::create_dir_all(&dir)?;
+                        fs::create_dir_all(dir)?;
                     }
                 }
 
@@ -946,7 +946,7 @@ pub fn goto_reference(cx: &mut Context) {
     );
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub enum SignatureHelpInvoked {
     Manual,
     Automatic,
@@ -990,6 +990,14 @@ pub fn signature_help_impl(cx: &mut Context, invoked: SignatureHelpInvoked) {
                 || SignatureHelp::visible_popup(compositor).is_some()
                 || was_manually_invoked)
             {
+                return;
+            }
+
+            // If the signature help invocation is automatic, don't show it outside of Insert Mode:
+            // it very probably means the server was a little slow to respond and the user has
+            // already moved on to something else, making a signature help popup will just be an
+            // annoyance, see https://github.com/helix-editor/helix/issues/3112
+            if !was_manually_invoked && editor.mode != Mode::Insert {
                 return;
             }
 

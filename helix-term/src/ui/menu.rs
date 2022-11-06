@@ -40,7 +40,7 @@ impl Item for PathBuf {
     type Data = PathBuf;
 
     fn label(&self, root_path: &Self::Data) -> Spans {
-        self.strip_prefix(&root_path)
+        self.strip_prefix(root_path)
             .unwrap_or(self)
             .to_string_lossy()
             .into()
@@ -118,7 +118,8 @@ impl<T: Item> Menu<T> {
                         .map(|score| (index, score))
                 }),
         );
-        self.matches.sort_unstable_by_key(|(_, score)| -score);
+        // Order of equal elements needs to be preserved as LSP preselected items come in order of high to low priority
+        self.matches.sort_by_key(|(_, score)| -score);
 
         // reset cursor position
         self.cursor = None;

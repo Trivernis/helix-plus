@@ -14,19 +14,14 @@ use toml::{map::Map, Value};
 use crate::graphics::UnderlineStyle;
 pub use crate::graphics::{Color, Modifier, Style};
 
-pub static DEFAULT_THEME: Lazy<Theme> = Lazy::new(|| {
-    //    let raw_theme: Value = toml::from_slice(include_bytes!("../../theme.toml"))
-    //        .expect("Failed to parse default theme");
-    //    Theme::from(raw_theme)
-
-    toml::from_slice(include_bytes!("../../theme.toml")).expect("Failed to parse default theme")
+pub static DEFAULT_THEME: Lazy<Theme> = Lazy::new(|| Theme {
+    name: "default".into(),
+    ..toml::from_slice(include_bytes!("../../theme.toml")).expect("Failed to parse default theme")
 });
-pub static BASE16_DEFAULT_THEME: Lazy<Theme> = Lazy::new(|| {
-    //    let raw_theme: Value = toml::from_slice(include_bytes!("../../base16_theme.toml"))
-    //        .expect("Failed to parse base 16 default theme");
-    //    Theme::from(raw_theme)
 
-    toml::from_slice(include_bytes!("../../base16_theme.toml"))
+pub static BASE16_DEFAULT_THEME: Lazy<Theme> = Lazy::new(|| Theme {
+    name: "base16_theme".into(),
+    ..toml::from_slice(include_bytes!("../../base16_theme.toml"))
         .expect("Failed to parse base 16 default theme")
 });
 
@@ -53,10 +48,12 @@ impl Loader {
             return Ok(self.base16_default());
         }
 
-        let value = self.load_theme(name, name, false)?;
-        let theme = Theme::deserialize(value)?;
+        let theme = self.load_theme(name, name, false).map(Theme::from)?;
 
-        Ok(theme)
+        Ok(Theme {
+            name: name.into(),
+            ..theme
+        })
     }
 
     // load the theme and its parent recursively and merge them
@@ -183,8 +180,10 @@ impl Loader {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Theme {
+    name: String,
+
     // UI styles are stored in a HashMap
     styles: HashMap<String, Style>,
     // tree-sitter highlight styles are stored in a Vec to optimize lookups
@@ -193,25 +192,26 @@ pub struct Theme {
     rainbow_length: usize,
 }
 
-// impl From<Value> for Theme {
-//     fn from(value: Value) -> Self {
-//         let values: Result<HashMap<String, Value>> =
-//             toml::from_str(&value.to_string()).context("Failed to load theme");
+impl From<Value> for Theme {
+    fn from(value: Value) -> Self {
+        let values: Result<HashMap<String, Value>> =
+            toml::from_str(&value.to_string()).context("Failed to load theme");
 
-//         let (styles, scopes, highlights) = build_theme_values(values);
-//         let rainbow_length = styles
-//             .iter()
-//             .filter(|s| s.0.starts_with("rainbow."))
-//             .count();
+        let (styles, scopes, highlights) = build_theme_values(values);
+        let rainbow_length = styles
+            .iter()
+            .filter(|s| s.0.starts_with("rainbow."))
+            .count();
 
-//         Self {
-//             styles,
-//             scopes,
-//             highlights,
-//             rainbow_length,
-//         }
-//     }
-// }
+        Self {
+            styles,
+            scopes,
+            highlights,
+            rainbow_length,
+            ..Default::default()
+        }
+    }
+}
 
 impl<'de> Deserialize<'de> for Theme {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -277,14 +277,57 @@ impl<'de> Deserialize<'de> for Theme {
             scopes,
             highlights,
             rainbow_length,
+            ..Default::default()
         })
     }
 }
 
+fn build_theme_values(
+    values: Result<HashMap<String, Value>>,
+) -> (HashMap<String, Style>, Vec<String>, Vec<Style>) {
+    let mut styles = HashMap::new();
+    let mut scopes = Vec::new();
+    let mut highlights = Vec::new();
+
+    if let Ok(mut colors) = values {
+        // TODO: alert user of parsing failures in editor
+        let palette = colors
+            .remove("palette")
+            .map(|value| {
+                ThemePalette::try_from(value).unwrap_or_else(|err| {
+                    warn!("{}", err);
+                    ThemePalette::default()
+                })
+            })
+            .unwrap_or_default();
+        // remove inherits from value to prevent errors
+        let _ = colors.remove("inherits");
+        styles.reserve(colors.len());
+        scopes.reserve(colors.len());
+        highlights.reserve(colors.len());
+        for (name, style_value) in colors {
+            let mut style = Style::default();
+            if let Err(err) = palette.parse_style(&mut style, style_value) {
+                warn!("{}", err);
+            }
+
+            // these are used both as UI and as highlights
+            styles.insert(name.clone(), style);
+            scopes.push(name);
+            highlights.push(style);
+        }
+    }
+
+    (styles, scopes, highlights)
+}
 impl Theme {
     #[inline]
     pub fn highlight(&self, index: usize) -> Style {
         self.highlights[index]
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     pub fn get(&self, scope: &str) -> Style {
@@ -324,7 +367,11 @@ impl Theme {
     }
 
     pub fn rainbow_length(&self) -> usize {
-        self.rainbow_length
+        if self.rainbow_length == 0 {
+            1
+        } else {
+            self.rainbow_length
+        }
     }
 
     pub fn default_rainbow() -> Vec<Style> {
