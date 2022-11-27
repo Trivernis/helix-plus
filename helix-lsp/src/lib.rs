@@ -285,6 +285,8 @@ impl MethodCall {
 pub enum Notification {
     // we inject this notification to signal the LSP is ready
     Initialized,
+    // and this notification to signal that the LSP exited
+    Exit,
     PublishDiagnostics(lsp::PublishDiagnosticsParams),
     ShowMessage(lsp::ShowMessageParams),
     LogMessage(lsp::LogMessageParams),
@@ -297,6 +299,7 @@ impl Notification {
 
         let notification = match method {
             lsp::notification::Initialized::METHOD => Self::Initialized,
+            lsp::notification::Exit::METHOD => Self::Exit,
             lsp::notification::PublishDiagnostics::METHOD => {
                 let params: lsp::PublishDiagnosticsParams = params.parse()?;
                 Self::PublishDiagnostics(params)
@@ -353,6 +356,43 @@ impl Registry {
             .map(|(_, client)| client.as_ref())
     }
 
+    pub fn remove_by_id(&mut self, id: usize) {
+        self.inner.retain(|_, (client_id, _)| client_id != &id)
+    }
+
+    pub fn restart(
+        &mut self,
+        language_config: &LanguageConfiguration,
+        doc_path: Option<&std::path::PathBuf>,
+    ) -> Result<Option<Arc<Client>>> {
+        let config = match &language_config.language_server {
+            Some(config) => config,
+            None => return Ok(None),
+        };
+
+        let scope = language_config.scope.clone();
+
+        match self.inner.entry(scope) {
+            Entry::Vacant(_) => Ok(None),
+            Entry::Occupied(mut entry) => {
+                // initialize a new client
+                let id = self.counter.fetch_add(1, Ordering::Relaxed);
+
+                let NewClientResult(client, incoming) =
+                    start_client(id, language_config, config, doc_path)?;
+                self.incoming.push(UnboundedReceiverStream::new(incoming));
+
+                let (_, old_client) = entry.insert((id, client.clone()));
+
+                tokio::spawn(async move {
+                    let _ = old_client.force_shutdown().await;
+                });
+
+                Ok(Some(client))
+            }
+        }
+    }
+
     pub fn get(
         &mut self,
         language_config: &LanguageConfiguration,
@@ -377,79 +417,6 @@ impl Registry {
                 Ok(Some(client))
             }
         }
-    }
-
-    pub fn restart(
-        &mut self,
-        language_config: &LanguageConfiguration,
-        path: Option<&PathBuf>,
-    ) -> Result<Arc<Client>> {
-        let config = language_config
-            .language_server
-            .as_ref()
-            .ok_or(Error::LspNotDefined)?;
-        let id = self
-            .inner
-            .get(&language_config.scope)
-            .ok_or(Error::LspNotDefined)?
-            .0;
-        let new_client = self.initialize_client(language_config, config, id, path)?;
-        let (_, client) = self
-            .inner
-            .get_mut(&language_config.scope)
-            .ok_or(Error::LspNotDefined)?;
-        *client = new_client;
-
-        Ok(client.clone())
-    }
-
-    fn initialize_client(
-        &mut self,
-        language_config: &LanguageConfiguration,
-        config: &helix_core::syntax::LanguageServerConfiguration,
-        id: usize,
-        path: Option<&PathBuf>,
-    ) -> Result<Arc<Client>> {
-        let (client, incoming, initialize_notify) = Client::start(
-            &config.command,
-            &config.args,
-            language_config.config.clone(),
-            &language_config.roots,
-            id,
-            config.timeout,
-            path,
-        )?;
-        self.incoming.push(UnboundedReceiverStream::new(incoming));
-        let client = Arc::new(client);
-
-        // Initialize the client asynchronously
-        let _client = client.clone();
-        tokio::spawn(async move {
-            use futures_util::TryFutureExt;
-            let value = _client
-                .capabilities
-                .get_or_try_init(|| {
-                    _client
-                        .initialize()
-                        .map_ok(|response| response.capabilities)
-                })
-                .await;
-
-            if let Err(e) = value {
-                log::error!("failed to initialize language server: {}", e);
-                return;
-            }
-
-            // next up, notify<initialized>
-            _client
-                .notify::<lsp::notification::Initialized>(lsp::InitializedParams {})
-                .await
-                .unwrap();
-
-            initialize_notify.notify_one();
-        });
-
-        Ok(client)
     }
 
     pub fn iter_clients(&self) -> impl Iterator<Item = &Arc<Client>> {
