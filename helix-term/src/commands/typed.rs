@@ -65,12 +65,28 @@ fn open(cx: &mut compositor::Context, args: &[Cow<str>], event: PromptEvent) -> 
     ensure!(!args.is_empty(), "wrong argument count");
     for arg in args {
         let (path, pos) = args::parse_file(arg);
-        let _ = cx.editor.open(&path, Action::Replace)?;
-        let (view, doc) = current!(cx.editor);
-        let pos = Selection::point(pos_at_coords(doc.text().slice(..), pos, true));
-        doc.set_selection(view.id, pos);
-        // does not affect opening a buffer without pos
-        align_view(doc, view, Align::Center);
+        // If the path is a directory, open a file picker on that directory and update the status
+        // message
+        if let Ok(true) = std::fs::canonicalize(&path).map(|p| p.is_dir()) {
+            let callback = async move {
+                let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+                    move |editor: &mut Editor, compositor: &mut Compositor| {
+                        let picker = ui::file_picker(path, &editor.config());
+                        compositor.push(Box::new(overlayed(picker)));
+                    },
+                ));
+                Ok(call)
+            };
+            cx.jobs.callback(callback);
+        } else {
+            // Otherwise, just open the file
+            let _ = cx.editor.open(&path, Action::Replace)?;
+            let (view, doc) = current!(cx.editor);
+            let pos = Selection::point(pos_at_coords(doc.text().slice(..), pos, true));
+            doc.set_selection(view.id, pos);
+            // does not affect opening a buffer without pos
+            align_view(doc, view, Align::Center);
+        }
     }
     Ok(())
 }
@@ -489,7 +505,7 @@ fn set_line_ending(
         }),
     );
     apply_transaction(&transaction, doc, view);
-    doc.append_changes_to_history(view.id);
+    doc.append_changes_to_history(view);
 
     Ok(())
 }
@@ -506,7 +522,7 @@ fn earlier(
     let uk = args.join(" ").parse::<UndoKind>().map_err(|s| anyhow!(s))?;
 
     let (view, doc) = current!(cx.editor);
-    let success = doc.earlier(view.id, uk);
+    let success = doc.earlier(view, uk);
     if !success {
         cx.editor.set_status("Already at oldest change");
     }
@@ -525,7 +541,7 @@ fn later(
 
     let uk = args.join(" ").parse::<UndoKind>().map_err(|s| anyhow!(s))?;
     let (view, doc) = current!(cx.editor);
-    let success = doc.later(view.id, uk);
+    let success = doc.later(view, uk);
     if !success {
         cx.editor.set_status("Already at newest change");
     }
@@ -802,7 +818,7 @@ fn theme(
                     .editor
                     .theme_loader
                     .load(theme_name)
-                    .with_context(|| "Theme does not exist")?;
+                    .map_err(|err| anyhow::anyhow!("Could not load theme: {}", err))?;
                 if !(true_color || theme.is_16_color()) {
                     bail!("Unsupported theme: theme requires true color support");
                 }
@@ -934,7 +950,7 @@ fn replace_selections_with_clipboard_impl(
             });
 
             apply_transaction(&transaction, doc, view);
-            doc.append_changes_to_history(view.id);
+            doc.append_changes_to_history(view);
             Ok(())
         }
         Err(e) => Err(e.context("Couldn't get system clipboard contents")),
@@ -1053,10 +1069,12 @@ fn reload(
     }
 
     let scrolloff = cx.editor.config().scrolloff;
+    let redraw_handle = cx.editor.redraw_handle.clone();
     let (view, doc) = current!(cx.editor);
-    doc.reload(view).map(|_| {
-        view.ensure_cursor_in_view(doc, scrolloff);
-    })
+    doc.reload(view, &cx.editor.diff_providers, redraw_handle)
+        .map(|_| {
+            view.ensure_cursor_in_view(doc, scrolloff);
+        })
 }
 
 fn reload_all(
@@ -1091,7 +1109,12 @@ fn reload_all(
 
         // Every doc is guaranteed to have at least 1 view at this point.
         let view = view_mut!(cx.editor, view_ids[0]);
-        doc.reload(view)?;
+
+        // Ensure that the view is synced with the document's history.
+        view.sync_changes(doc);
+
+        let redraw_handle = cx.editor.redraw_handle.clone();
+        doc.reload(view, &cx.editor.diff_providers, redraw_handle)?;
 
         for view_id in view_ids {
             let view = view_mut!(cx.editor, view_id);
@@ -1598,7 +1621,7 @@ fn sort_impl(
     );
 
     apply_transaction(&transaction, doc, view);
-    doc.append_changes_to_history(view.id);
+    doc.append_changes_to_history(view);
 
     Ok(())
 }
@@ -1642,7 +1665,7 @@ fn reflow(
     });
 
     apply_transaction(&transaction, doc, view);
-    doc.append_changes_to_history(view.id);
+    doc.append_changes_to_history(view);
     view.ensure_cursor_in_view(doc, scrolloff);
 
     Ok(())
@@ -1759,13 +1782,30 @@ fn insert_output(
     Ok(())
 }
 
+fn pipe_to(
+    cx: &mut compositor::Context,
+    args: &[Cow<str>],
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    pipe_impl(cx, args, event, &ShellBehavior::Ignore)
+}
+
 fn pipe(cx: &mut compositor::Context, args: &[Cow<str>], event: PromptEvent) -> anyhow::Result<()> {
+    pipe_impl(cx, args, event, &ShellBehavior::Replace)
+}
+
+fn pipe_impl(
+    cx: &mut compositor::Context,
+    args: &[Cow<str>],
+    event: PromptEvent,
+    behavior: &ShellBehavior,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
 
     ensure!(!args.is_empty(), "Shell command required");
-    shell(cx, &args.join(" "), &ShellBehavior::Replace);
+    shell(cx, &args.join(" "), behavior);
     Ok(())
 }
 
@@ -2315,6 +2355,13 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
             aliases: &[],
             doc: "Pipe each selection to the shell command.",
             fun: pipe,
+            completer: None,
+        },
+        TypableCommand {
+            name: "pipe-to",
+            aliases: &[],
+            doc: "Pipe each selection to the shell command, ignoring output.",
+            fun: pipe_to,
             completer: None,
         },
         TypableCommand {

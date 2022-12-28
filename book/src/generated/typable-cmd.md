@@ -71,9 +71,6 @@
 | `:insert-output` | Run shell command, inserting output before each selection. |
 | `:append-output` | Run shell command, appending output after each selection. |
 | `:pipe` | Pipe each selection to the shell command. |
-<<<<<<< HEAD
+| `:pipe-to` | Pipe each selection to the shell command, ignoring output. |
 | `:run-shell-command`, `:sh` | Run a shell command |
-||||||| 4b1fe367
-=======
 | `:lsp-restart` | Restarts the LSP server of the current buffer |
->>>>>>> lsp-restart

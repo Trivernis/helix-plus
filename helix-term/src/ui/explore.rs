@@ -220,10 +220,8 @@ impl TreeItem for FileInfo {
         return match self.file_type {
             FileType::Dir => {
                 if self.expanded {
-                    //Some(("", &helix_view::theme::Color::Yellow))
                     Some(("", &helix_view::theme::Color::Yellow))
                 } else {
-                    // Some(("", &helix_view::theme::Color::Yellow))
                     Some(("", &helix_view::theme::Color::Yellow))
                 }
             }

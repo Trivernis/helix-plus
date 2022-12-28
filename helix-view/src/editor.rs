@@ -9,6 +9,7 @@ use crate::{
     tree::{self, Tree},
     Align, Document, DocumentId, View, ViewId,
 };
+use helix_vcs::DiffProviderRegistry;
 
 use futures_util::stream::select_all::SelectAll;
 use futures_util::{future, StreamExt};
@@ -26,7 +27,10 @@ use std::{
 };
 
 use tokio::{
-    sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
+    sync::{
+        mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
+        Notify, RwLock,
+    },
     time::{sleep, Duration, Instant, Sleep},
 };
 
@@ -517,6 +521,8 @@ pub enum GutterType {
     LineNumbers,
     /// Show one blank space
     Spacer,
+    /// Highlight local changes
+    Diff,
 }
 
 impl std::str::FromStr for GutterType {
@@ -527,6 +533,7 @@ impl std::str::FromStr for GutterType {
             "diagnostics" => Ok(Self::Diagnostics),
             "spacer" => Ok(Self::Spacer),
             "line-numbers" => Ok(Self::LineNumbers),
+            "diff" => Ok(Self::Diff),
             _ => anyhow::bail!("Gutter type can only be `diagnostics` or `line-numbers`."),
         }
     }
@@ -673,6 +680,8 @@ impl Default for Config {
                 GutterType::Diagnostics,
                 GutterType::Spacer,
                 GutterType::LineNumbers,
+                GutterType::Spacer,
+                GutterType::Diff,
             ],
             middle_click_paste: true,
             auto_pairs: AutoPairConfig::default(),
@@ -756,6 +765,7 @@ pub struct Editor {
     pub macro_replaying: Vec<char>,
     pub language_servers: helix_lsp::Registry,
     pub diagnostics: BTreeMap<lsp::Url, Vec<lsp::Diagnostic>>,
+    pub diff_providers: DiffProviderRegistry,
 
     pub debugger: Option<dap::Client>,
     pub debugger_events: SelectAll<UnboundedReceiverStream<dap::Payload>>,
@@ -786,7 +796,14 @@ pub struct Editor {
     pub exit_code: i32,
 
     pub config_events: (UnboundedSender<ConfigEvent>, UnboundedReceiver<ConfigEvent>),
+    /// Allows asynchronous tasks to control the rendering
+    /// The `Notify` allows asynchronous tasks to request the editor to perform a redraw
+    /// The `RwLock` blocks the editor from performing the render until an exclusive lock can be aquired
+    pub redraw_handle: RedrawHandle,
+    pub needs_redraw: bool,
 }
+
+pub type RedrawHandle = (Arc<Notify>, Arc<RwLock<()>>);
 
 #[derive(Debug)]
 pub enum EditorEvent {
@@ -873,6 +890,7 @@ impl Editor {
             theme: theme_loader.default(),
             language_servers: helix_lsp::Registry::new(),
             diagnostics: BTreeMap::new(),
+            diff_providers: DiffProviderRegistry::default(),
             debugger: None,
             debugger_events: SelectAll::new(),
             breakpoints: HashMap::new(),
@@ -891,6 +909,8 @@ impl Editor {
             auto_pairs,
             exit_code: 0,
             config_events: unbounded_channel(),
+            redraw_handle: Default::default(),
+            needs_redraw: false,
         }
     }
 
@@ -1072,7 +1092,8 @@ impl Editor {
     fn _refresh(&mut self) {
         let config = self.config();
         for (view, _) in self.tree.views_mut() {
-            let doc = &self.documents[&view.doc];
+            let doc = doc_mut!(self, &view.doc);
+            view.sync_changes(doc);
             view.ensure_cursor_in_view(doc, config.scrolloff)
         }
     }
@@ -1084,6 +1105,7 @@ impl Editor {
 
         let doc = doc_mut!(self, &doc_id);
         doc.ensure_view_init(view.id);
+        view.sync_changes(doc);
 
         align_view(doc, view, Align::Center);
     }
@@ -1095,6 +1117,8 @@ impl Editor {
             log::error!("cannot switch to document that does not exist (anymore)");
             return;
         }
+
+        self.enter_normal_mode();
 
         match action {
             Action::Replace => {
@@ -1115,6 +1139,9 @@ impl Editor {
 
                 let (view, doc) = current!(self);
                 let view_id = view.id;
+
+                // Append any outstanding changes to history in the old document.
+                doc.append_changes_to_history(view);
 
                 if remove_empty_scratch {
                     // Copy `doc.id` into a variable before calling `self.documents.remove`, which requires a mutable
@@ -1220,7 +1247,9 @@ impl Editor {
             let mut doc = Document::open(&path, None, Some(self.syn_loader.clone()))?;
 
             let _ = Self::launch_language_server(&mut self.language_servers, &mut doc);
-
+            if let Some(diff_base) = self.diff_providers.get_diff_base(&path) {
+                doc.set_diff_base(diff_base, self.redraw_handle.clone());
+            }
             self.new_document(doc)
         };
 
@@ -1351,8 +1380,14 @@ impl Editor {
         // if leaving the view: mode should reset and the cursor should be
         // within view
         if prev_id != view_id {
-            self.mode = Mode::Normal;
+            self.enter_normal_mode();
             self.ensure_cursor_in_view(view_id);
+
+            // Update jumplist selections with new document changes.
+            for (view, _focused) in self.tree.views_mut() {
+                let doc = doc_mut!(self, &view.doc);
+                view.sync_changes(doc);
+            }
         }
     }
 
@@ -1453,24 +1488,39 @@ impl Editor {
     }
 
     pub async fn wait_event(&mut self) -> EditorEvent {
-        tokio::select! {
-            biased;
+        // the loop only runs once or twice and would be better implemented with a recursion + const generic
+        // however due to limitations with async functions that can not be implemented right now
+        loop {
+            tokio::select! {
+                biased;
 
-            Some(event) = self.save_queue.next() => {
-                self.write_count -= 1;
-                EditorEvent::DocumentSaved(event)
-            }
-            Some(config_event) = self.config_events.1.recv() => {
-                EditorEvent::ConfigEvent(config_event)
-            }
-            Some(message) = self.language_servers.incoming.next() => {
-                EditorEvent::LanguageServerMessage(message)
-            }
-            Some(event) = self.debugger_events.next() => {
-                EditorEvent::DebuggerEvent(event)
-            }
-            _ = &mut self.idle_timer => {
-                EditorEvent::IdleTimer
+                Some(event) = self.save_queue.next() => {
+                    self.write_count -= 1;
+                    return EditorEvent::DocumentSaved(event)
+                }
+                Some(config_event) = self.config_events.1.recv() => {
+                    return EditorEvent::ConfigEvent(config_event)
+                }
+                Some(message) = self.language_servers.incoming.next() => {
+                    return EditorEvent::LanguageServerMessage(message)
+                }
+                Some(event) = self.debugger_events.next() => {
+                    return EditorEvent::DebuggerEvent(event)
+                }
+
+                _ = self.redraw_handle.0.notified() => {
+                    if  !self.needs_redraw{
+                        self.needs_redraw = true;
+                        let timeout = Instant::now() + Duration::from_millis(96);
+                        if timeout < self.idle_timer.deadline(){
+                            self.idle_timer.as_mut().reset(timeout)
+                        }
+                    }
+                }
+
+                _ = &mut self.idle_timer  => {
+                    return EditorEvent::IdleTimer
+                }
             }
         }
     }
@@ -1494,5 +1544,68 @@ impl Editor {
         }
 
         Ok(())
+    }
+
+    /// Switches the editor into normal mode.
+    pub fn enter_normal_mode(&mut self) {
+        use helix_core::{graphemes, Range};
+
+        if self.mode == Mode::Normal {
+            return;
+        }
+
+        self.mode = Mode::Normal;
+        let (view, doc) = current!(self);
+
+        try_restore_indent(doc, view);
+
+        // if leaving append mode, move cursor back by 1
+        if doc.restore_cursor {
+            let text = doc.text().slice(..);
+            let selection = doc.selection(view.id).clone().transform(|range| {
+                Range::new(
+                    range.from(),
+                    graphemes::prev_grapheme_boundary(text, range.to()),
+                )
+            });
+
+            doc.set_selection(view.id, selection);
+            doc.restore_cursor = false;
+        }
+    }
+}
+
+fn try_restore_indent(doc: &mut Document, view: &mut View) {
+    use helix_core::{
+        chars::char_is_whitespace, line_ending::line_end_char_index, Operation, Transaction,
+    };
+
+    fn inserted_a_new_blank_line(changes: &[Operation], pos: usize, line_end_pos: usize) -> bool {
+        if let [Operation::Retain(move_pos), Operation::Insert(ref inserted_str), Operation::Retain(_)] =
+            changes
+        {
+            move_pos + inserted_str.len() == pos
+                && inserted_str.starts_with('\n')
+                && inserted_str.chars().skip(1).all(char_is_whitespace)
+                && pos == line_end_pos // ensure no characters exists after current position
+        } else {
+            false
+        }
+    }
+
+    let doc_changes = doc.changes().changes();
+    let text = doc.text().slice(..);
+    let range = doc.selection(view.id).primary();
+    let pos = range.cursor(text);
+    let line_end_pos = line_end_char_index(&text, range.cursor_line(text));
+
+    if inserted_a_new_blank_line(doc_changes, pos, line_end_pos) {
+        // Removes tailing whitespaces.
+        let transaction =
+            Transaction::change_by_selection(doc.text(), doc.selection(view.id), |range| {
+                let line_start_pos = text.line_to_char(range.cursor_line(text));
+                (line_start_pos, pos, None)
+            });
+        crate::apply_transaction(&transaction, doc, view);
     }
 }

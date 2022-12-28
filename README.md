@@ -1,30 +1,4 @@
-# Helix Plus
-
-<h1 style="color:red">This is an unstable fork of helix with some PRs merged and some merge conflicts resolved </h1> 
-
-# Merged PRs
-
-- [File explorer and tree helper](https://github.com/helix-editor/helix/pull/2377)
-  - [with Icons](https://github.com/r0l1/helix/tree/tree_explorer_icons)
-- [Add LSP workspace command picker](https://github.com/helix-editor/helix/pull/3140)
-- [completion fix](https://github.com/helix-editor/helix/pull/1819)
-- [Add rainbow indentation guides](https://github.com/helix-editor/helix/pull/4056)
-- [Improve sorting for inline menu (codeaction + completion)](https://github.com/helix-editor/helix/pull/4134)
-
-And others I forgot about...
-
-
-# Applied Changes
-
-- Changed opening the window popup from `ctrl + w` to `ctrl + v`
-- Added an auto highlight for files in the tree explorer when jumping through opened buffers 
-- Changed some default settings (enabling bufferline, indent guides, the embedded explorer, cursor modes etc.)
-- Added a `--show-explorer` cli flag to open the file explorer on startup (useful for embedded explorer mode)
-- Added a `delete` (aliases `rm`, `del`) command to delete the file associated with the current buffer
-- Changed keybind `<space> E` to close the explorer instead of toggling the recursion one
-- Added a completion chars setting that triggers autocomplete when typing one of those chars
-
-- - -
+# Helix
 
 [![Build status](https://github.com/helix-editor/helix/actions/workflows/build.yml/badge.svg)](https://github.com/helix-editor/helix/actions)
 

@@ -1,5 +1,6 @@
 use anyhow::{Context, Error, Result};
 use crossterm::event::EventStream;
+use helix_loader::VERSION_AND_GIT_HASH;
 use helix_term::application::Application;
 use helix_term::args::Args;
 use helix_term::config::Config;
@@ -75,7 +76,7 @@ FLAGS:
     --show-explorer                Opens the explorer on startup
 ",
         env!("CARGO_PKG_NAME"),
-        env!("VERSION_AND_GIT_HASH"),
+        VERSION_AND_GIT_HASH,
         env!("CARGO_PKG_AUTHORS"),
         env!("CARGO_PKG_DESCRIPTION"),
         logpath.display(),
@@ -90,7 +91,7 @@ FLAGS:
     }
 
     if args.display_version {
-        println!("helix {}", env!("VERSION_AND_GIT_HASH"));
+        println!("helix {}", VERSION_AND_GIT_HASH);
         std::process::exit(0);
     }
 
