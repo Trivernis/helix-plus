@@ -38,7 +38,7 @@ If you would like to build from source:
 ```shell
 git clone https://github.com/helix-editor/helix
 cd helix
-cargo install --path helix-term
+cargo install --locked --path helix-term
 ```
 
 This will install the `hx` binary to `$HOME/.cargo/bin` and build tree-sitter grammars in `./runtime/grammars`.
@@ -70,7 +70,7 @@ mklink /D runtime "<helix-repo>\runtime"
 
 The runtime location can be overridden via the `HELIX_RUNTIME` environment variable.
 
-> NOTE: if `HELIX_RUNTIME` is set prior to calling `cargo install --path helix-term`,
+> NOTE: if `HELIX_RUNTIME` is set prior to calling `cargo install --locked --path helix-term`,
 > tree-sitter grammars will be built in `$HELIX_RUNTIME/grammars`.
 
 If you plan on keeping the repo locally, an alternative to copying/symlinking
@@ -98,6 +98,7 @@ If installing from source, to use Helix in desktop environments that supports [X
 
 ```bash
 cp contrib/Helix.desktop ~/.local/share/applications
+cp contrib/helix.png ~/.local/share/icons
 ```
 
 To use another terminal than the default, you will need to modify the `.desktop` file. For example, to use `kitty`:
@@ -106,8 +107,6 @@ To use another terminal than the default, you will need to modify the `.desktop`
 sed -i "s|Exec=hx %F|Exec=kitty hx %F|g" ~/.local/share/applications/Helix.desktop
 sed -i "s|Terminal=true|Terminal=false|g" ~/.local/share/applications/Helix.desktop
 ```
-
-Please note: there is no icon for Helix yet, so the system default will be used.
 
 ## macOS
 
