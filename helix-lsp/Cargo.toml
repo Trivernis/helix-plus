@@ -15,14 +15,14 @@ homepage = "https://helix-editor.com"
 helix-core = { version = "0.6", path = "../helix-core" }
 helix-loader = { version = "0.6", path = "../helix-loader" }
 
-anyhow = "1.0"
-futures-executor = "0.3"
-futures-util = { version = "0.3", features = ["std", "async-await"], default-features = false }
-log = "0.4"
-lsp-types = { version = "0.93", features = ["proposed"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-thiserror = "1.0"
-tokio = { version = "1.24", features = ["rt", "rt-multi-thread", "io-util", "io-std", "time", "process", "macros", "fs", "parking_lot", "sync"] }
+anyhow = "1.0.68"
+futures-executor = "0.3.25"
+futures-util = { version = "0.3.25", features = ["std", "async-await"], default-features = false }
+log = "0.4.17"
+lsp-types = { version = "0.93.2", features = ["proposed"] }
+serde = { version = "1.0.152", features = ["derive"] }
+serde_json = "1.0.91"
+thiserror = "1.0.38"
+tokio = { version = "1.24.1", features = ["rt", "rt-multi-thread", "io-util", "io-std", "time", "process", "macros", "fs", "parking_lot", "sync"] }
 tokio-stream = "0.1.11"
-which = "4.2"
+which = "4.3.0"
