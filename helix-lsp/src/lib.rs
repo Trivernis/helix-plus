@@ -14,7 +14,6 @@ use tokio::sync::mpsc::UnboundedReceiver;
 
 use std::{
     collections::{hash_map::Entry, HashMap},
-    path::PathBuf,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,

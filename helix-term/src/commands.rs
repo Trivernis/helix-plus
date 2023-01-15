@@ -3040,18 +3040,11 @@ pub mod insert {
         super::completion(cx);
     }
 
-    fn language_server_completion(cx: &mut Context, ch: char) {
-        let config = cx.editor.config();
-        if !config.auto_completion {
-            return;
-        }
-
+    fn is_server_trigger_char(doc: &Document, ch: char) -> bool {
         use helix_lsp::lsp;
-        // if ch matches completion char, trigger completion
-        let doc = doc_mut!(cx.editor);
-        let language_server = match doc.language_server() {
-            Some(language_server) => language_server,
-            None => return,
+
+        let Some(language_server) = doc.language_server() else {
+            return false;
         };
 
         let capabilities = language_server.capabilities();
@@ -3061,11 +3054,36 @@ pub mod insert {
             ..
         }) = &capabilities.completion_provider
         {
-            // TODO: what if trigger is multiple chars long
-            if triggers.iter().any(|trigger| trigger.contains(ch)) {
-                cx.editor.clear_idle_timer();
-                super::completion(cx);
+            triggers.iter().any(|t| t.contains(ch))
+        } else {
+            false
+        }
+    }
+
+    fn language_server_completion(cx: &mut Context, ch: char) {
+        use helix_core::chars::char_is_word;
+
+        let config = cx.editor.config();
+        if !config.auto_completion {
+            return;
+        }
+
+        let (view, doc) = current_ref!(cx.editor);
+
+        if char_is_word(ch) && doc.savepoint.is_none() {
+            let text = doc.text().slice(..);
+            let cursor = doc.selection(view.id).primary().cursor(text);
+            let mut chars = text.chars_at(cursor);
+            chars.reverse();
+
+            for _ in 0..config.completion_trigger_len {
+                if chars.next().map_or(true, |c| !char_is_word(c)) {
+                    return;
+                }
             }
+            cx.editor.reset_idle_timer();
+        } else if is_server_trigger_char(doc, ch) {
+            cx.editor.reset_idle_timer();
         }
     }
 
@@ -4070,9 +4088,15 @@ pub fn completion(cx: &mut Context) {
 
     let pos = pos_to_lsp_pos(doc.text(), cursor, offset_encoding);
 
-    let future = match language_server.completion(doc.identifier(), pos, None) {
-        Some(future) => future,
-        None => return,
+    let Some(future) = language_server.completion(doc.identifier(), pos, None) else {
+        return;
+    };
+    let future = async move {
+        match future.await {
+            Ok(v) => Ok(v),
+            Err(helix_lsp::Error::Timeout) => Ok(serde_json::Value::Null),
+            Err(e) => Err(e),
+        }
     };
 
     let trigger_offset = cursor;
@@ -4085,29 +4109,54 @@ pub fn completion(cx: &mut Context) {
     iter.reverse();
     let offset = iter.take_while(|ch| chars::char_is_word(*ch)).count();
     let start_offset = cursor.saturating_sub(offset);
+    let prefix = text.slice(start_offset..cursor).to_string();
+
+    doc.savepoint();
+    let trigger_version = doc.version();
 
     cx.callback(
         future,
         move |editor, compositor, response: Option<lsp::CompletionResponse>| {
+            let doc = doc_mut!(editor);
+            let Some(savepoint) = doc.savepoint.take() else {
+                return;
+            };
             if editor.mode != Mode::Insert {
                 // we're not in insert mode anymore
                 return;
             }
+            if savepoint.0 != trigger_version {
+                doc.savepoint = Some(savepoint);
+                return;
+            }
 
-            let items = match response {
+            let mut items = match response {
                 Some(lsp::CompletionResponse::Array(items)) => items,
                 // TODO: do something with is_incomplete
                 Some(lsp::CompletionResponse::List(lsp::CompletionList {
                     is_incomplete: _is_incomplete,
                     items,
                 })) => items,
-                None => Vec::new(),
+                None => {
+                    editor.set_status(
+                        "The completion response is None. We will ask the server again",
+                    );
+                    editor.reset_idle_timer();
+                    return;
+                }
             };
 
+            if prefix.is_empty() {
+                items.retain(|item| match &item.filter_text {
+                    Some(t) => t.starts_with(&prefix),
+                    None => item.label.starts_with(&prefix),
+                })
+            }
             if items.is_empty() {
                 // editor.set_error("No completion available");
                 return;
             }
+            doc.savepoint = Some(savepoint);
             let size = compositor.size();
             let ui = compositor.find::<ui::EditorView>().unwrap();
             ui.set_completion(
