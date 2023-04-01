@@ -298,6 +298,30 @@ fn force_buffer_close_all(
     buffer_close_by_ids_impl(cx, &document_ids, true)
 }
 
+fn delete(
+    cx: &mut compositor::Context,
+    _args: &[Cow<str>],
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    cx.block_try_flush_writes()?;
+    let doc = doc_mut!(cx.editor);
+
+    if doc.path().is_none() {
+        bail!("cannot delete a buffer with no associated file on the disk");
+    }
+
+    let doc_id = view!(cx.editor).doc;
+
+    let future = doc.delete();
+    cx.jobs.add(Job::new(future));
+
+    buffer_close_by_ids_impl(cx, &[doc_id], true)
+}
+
 fn buffer_next(
     cx: &mut compositor::Context,
     _args: &[Cow<str>],
@@ -2231,6 +2255,13 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
             aliases: &["bca!", "bcloseall!"],
             doc: "Force close all buffers ignoring unsaved changes without quitting.",
             fun: force_buffer_close_all,
+            signature: CommandSignature::none(),
+        },
+        TypableCommand {
+            name: "delete",
+            aliases: &["remove", "rm", "del"],
+            doc: "Deletes the file associated with the current buffer",
+            fun: delete,
             signature: CommandSignature::none(),
         },
         TypableCommand {
