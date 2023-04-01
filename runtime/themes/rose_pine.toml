@@ -38,6 +38,7 @@
 "ui.virtual.ruler" = { bg = "overlay" }
 "ui.virtual.whitespace" = { fg = "highlight_low" }
 "ui.virtual.indent-guide" = { fg = "muted" }
+"ui.virtual.inlay-hint" = { fg = "subtle" }
 
 "ui.menu" = { fg = "subtle", bg = "surface" }
 "ui.menu.selected" = { fg = "text" }
@@ -143,6 +144,7 @@
 # "markup.list.numbered" = ""
 "markup.bold" = { modifiers = ["bold"] }
 "markup.italic" = { modifiers = ["italic"] }
+"markup.strikethrough" = { modifiers = ["crossed_out"] }
 "markup.link" = "iris"
 "markup.link.url" = { fg = "iris",  underline = { color = "iris", style = "line" } } 
 "markup.link.label" = "subtle"
