@@ -266,7 +266,7 @@ impl Explorer {
         self.state.open = true;
     }
 
-    fn unfocus(&mut self) {
+    pub fn unfocus(&mut self) {
         self.state.focus = false;
     }
 
