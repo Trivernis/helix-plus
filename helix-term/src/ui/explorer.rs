@@ -605,6 +605,11 @@ impl Explorer {
         }
     }
 
+    /// Returns the current file in the tree view
+    pub fn current_file(&self) -> Option<&PathBuf> {
+        self.tree.current_item().ok().map(|c| &c.path)
+    }
+
     pub fn is_opened(&self) -> bool {
         self.state.open
     }
