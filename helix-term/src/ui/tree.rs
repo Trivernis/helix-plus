@@ -1,7 +1,7 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, sync::Arc};
 
 use anyhow::Result;
-use helix_view::theme::Modifier;
+use helix_view::{icons::Icon, theme::Modifier};
 
 use crate::{
     compositor::{Component, Context, EventResult},
@@ -290,6 +290,7 @@ pub struct TreeView<T: TreeViewItem> {
     max_len: usize,
     count: usize,
     tree_symbol_style: String,
+    pub icons: TreeIcons,
 
     #[allow(clippy::type_complexity)]
     pre_render: Option<Box<dyn Fn(&mut Self, Rect) + 'static>>,
@@ -325,6 +326,7 @@ impl<T: TreeViewItem> TreeView<T> {
             on_next_key: None,
             search_prompt: None,
             search_str: "".into(),
+            icons: TreeIcons::default(),
         })
     }
 
@@ -346,6 +348,11 @@ impl<T: TreeViewItem> TreeView<T> {
 
     pub fn tree_symbol_style(mut self, style: String) -> Self {
         self.tree_symbol_style = style;
+        self
+    }
+
+    pub fn icons(mut self, icons: TreeIcons) -> Self {
+        self.icons = icons;
         self
     }
 
@@ -775,12 +782,33 @@ struct RenderedLine {
     content: String,
     selected: bool,
     is_ancestor_of_current_item: bool,
+    icon: Icon,
 }
 struct RenderTreeParams<'a, T> {
     tree: &'a Tree<T>,
     prefix: &'a String,
     level: usize,
     selected: usize,
+    icons: &'a TreeIcons,
+}
+
+#[derive(Clone)]
+pub struct TreeIcons {
+    pub tree_closed: Icon,
+    pub tree_opened: Icon,
+    pub item: Icon,
+    pub icon_fn: Option<Arc<dyn Fn(&str) -> Icon>>,
+}
+
+impl Default for TreeIcons {
+    fn default() -> Self {
+        Self {
+            tree_closed: Icon::unstyled('⏵'),
+            tree_opened: Icon::unstyled('⏷'),
+            item: Icon::unstyled(' '),
+            icon_fn: None,
+        }
+    }
 }
 
 fn render_tree<T: TreeViewItem>(
@@ -789,28 +817,36 @@ fn render_tree<T: TreeViewItem>(
         prefix,
         level,
         selected,
+        icons,
     }: RenderTreeParams<T>,
 ) -> Vec<RenderedLine> {
-    let indent = if level > 0 {
-        let indicator = if tree.item().is_parent() {
-            if tree.is_opened {
-                "⏷"
-            } else {
-                "⏵"
-            }
-        } else {
-            " "
-        };
-        format!("{}{} ", prefix, indicator)
-    } else {
-        "".to_string()
-    };
     let name = tree.item.name();
+
+    let icon = if tree.item().is_parent() {
+        if tree.is_opened {
+            icons.tree_opened.to_owned()
+        } else {
+            icons.tree_closed.to_owned()
+        }
+    } else {
+        if let Some(icon_fn) = icons.icon_fn.as_ref() {
+            icon_fn(&name)
+        } else {
+            icons.item.to_owned()
+        }
+    };
+
+    let indent = if level > 0 {
+        format!("{} ", prefix)
+    } else {
+        String::new()
+    };
     let head = RenderedLine {
         indent,
         selected: selected == tree.index,
         is_ancestor_of_current_item: selected != tree.index && tree.get(selected).is_some(),
         content: name,
+        icon,
     };
     let prefix = format!("{}{}", prefix, if level == 0 { "" } else { "  " });
     vec![head]
@@ -821,6 +857,7 @@ fn render_tree<T: TreeViewItem>(
                 prefix: &prefix,
                 level: level + 1,
                 selected,
+                icons,
             })
         }))
         .collect()
@@ -861,12 +898,20 @@ impl<T: TreeViewItem + Clone> TreeView<T> {
                 style,
             );
 
+            let x = area.x.saturating_add(indent_len);
+            surface.set_stringn(
+                x,
+                area.y,
+                line.icon.icon_char.to_string(),
+                2,
+                line.icon.style.map(|s| s.into()).unwrap_or(style),
+            );
             let style = if line.selected {
                 style.add_modifier(Modifier::REVERSED)
             } else {
                 style
             };
-            let x = area.x.saturating_add(indent_len);
+            let x = x.saturating_add(2);
             surface.set_stringn(
                 x,
                 area.y,
@@ -915,6 +960,7 @@ impl<T: TreeViewItem + Clone> TreeView<T> {
             prefix: &"".to_string(),
             level: 0,
             selected: self.selected,
+            icons: &self.icons,
         };
 
         let lines = render_tree(params);

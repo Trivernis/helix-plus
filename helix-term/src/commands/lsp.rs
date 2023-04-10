@@ -3,15 +3,12 @@ use helix_lsp::{
     block_on,
     lsp::{
         self, CodeAction, CodeActionOrCommand, CodeActionTriggerKind, DiagnosticSeverity,
-        NumberOrString,
+        NumberOrString, SymbolKind,
     },
     util::{diagnostic_to_lsp_diagnostic, lsp_range_to_range, range_to_lsp_range},
     OffsetEncoding,
 };
-use tui::{
-    text::{Span, Spans},
-    widgets::Row,
-};
+use tui::{text::Span, widgets::Row};
 
 use super::{align_view, push_jump, Align, Context, Editor, Open};
 
@@ -19,6 +16,7 @@ use helix_core::{path, text_annotations::InlineAnnotation, Selection};
 use helix_view::{
     document::{DocumentInlayHints, DocumentInlayHintsId, Mode},
     editor::Action,
+    icons::{self, Icon, Icons},
     theme::Style,
     Document, View,
 };
@@ -26,7 +24,7 @@ use helix_view::{
 use crate::{
     compositor::{self, Compositor},
     ui::{
-        self, lsp::SignatureHelp, overlay::overlayed, DynamicPicker, FileLocation, FilePicker,
+        self, lsp::SignatureHelp, overlay::overlaid, DynamicPicker, FileLocation, FilePicker,
         Popup, PromptEvent,
     },
 };
@@ -57,7 +55,7 @@ impl ui::menu::Item for lsp::Location {
     /// Current working directory.
     type Data = PathBuf;
 
-    fn format(&self, cwdir: &Self::Data) -> Row {
+    fn format<'a>(&self, cwdir: &Self::Data, _icons: Option<&'a Icons>) -> Row {
         // The preallocation here will overallocate a few characters since it will account for the
         // URL's scheme, which is not used most of the time since that scheme will be "file://".
         // Those extra chars will be used to avoid allocating when writing the line number (in the
@@ -81,7 +79,7 @@ impl ui::menu::Item for lsp::Location {
 
         // Most commonly, this will not allocate, especially on Unix systems where the root prefix
         // is a simple `/` and not `C:\` (with whatever drive letter)
-        write!(&mut res, ":{}", self.range.start.line)
+        write!(&mut res, ":{}", self.range.start.line + 1)
             .expect("Will only failed if allocating fail");
         res.into()
     }
@@ -91,16 +89,58 @@ impl ui::menu::Item for lsp::SymbolInformation {
     /// Path to currently focussed document
     type Data = Option<lsp::Url>;
 
-    fn format(&self, current_doc_path: &Self::Data) -> Row {
+    fn format<'a>(&self, current_doc_path: &Self::Data, icons: Option<&'a Icons>) -> Row {
+        let icon =
+            icons
+                .and_then(|icons| icons.symbol_kind.as_ref())
+                .and_then(|symbol_kind_icons| match self.kind {
+                    SymbolKind::FILE => symbol_kind_icons.get("file"),
+                    SymbolKind::MODULE => symbol_kind_icons.get("module"),
+                    SymbolKind::NAMESPACE => symbol_kind_icons.get("namespace"),
+                    SymbolKind::PACKAGE => symbol_kind_icons.get("package"),
+                    SymbolKind::CLASS => symbol_kind_icons.get("class"),
+                    SymbolKind::METHOD => symbol_kind_icons.get("method"),
+                    SymbolKind::PROPERTY => symbol_kind_icons.get("property"),
+                    SymbolKind::FIELD => symbol_kind_icons.get("field"),
+                    SymbolKind::CONSTRUCTOR => symbol_kind_icons.get("constructor"),
+                    SymbolKind::ENUM => symbol_kind_icons.get("enumeration"),
+                    SymbolKind::INTERFACE => symbol_kind_icons.get("interface"),
+                    SymbolKind::FUNCTION => symbol_kind_icons.get("function"),
+                    SymbolKind::VARIABLE => symbol_kind_icons.get("variable"),
+                    SymbolKind::CONSTANT => symbol_kind_icons.get("constant"),
+                    SymbolKind::STRING => symbol_kind_icons.get("string"),
+                    SymbolKind::NUMBER => symbol_kind_icons.get("number"),
+                    SymbolKind::BOOLEAN => symbol_kind_icons.get("boolean"),
+                    SymbolKind::ARRAY => symbol_kind_icons.get("array"),
+                    SymbolKind::OBJECT => symbol_kind_icons.get("object"),
+                    SymbolKind::KEY => symbol_kind_icons.get("key"),
+                    SymbolKind::NULL => symbol_kind_icons.get("null"),
+                    SymbolKind::ENUM_MEMBER => symbol_kind_icons.get("enum-member"),
+                    SymbolKind::STRUCT => symbol_kind_icons.get("structure"),
+                    SymbolKind::EVENT => symbol_kind_icons.get("event"),
+                    SymbolKind::OPERATOR => symbol_kind_icons.get("operator"),
+                    SymbolKind::TYPE_PARAMETER => symbol_kind_icons.get("type-parameter"),
+                    _ => Some(&icons::BLANK_ICON),
+                });
+
         if current_doc_path.as_ref() == Some(&self.location.uri) {
-            self.name.as_str().into()
+            if let Some(icon) = icon {
+                Row::new([Span::from(icon), self.name.as_str().into()])
+            } else {
+                self.name.as_str().into()
+            }
         } else {
-            match self.location.uri.to_file_path() {
+            let symbol_span: Span = match self.location.uri.to_file_path() {
                 Ok(path) => {
                     let get_relative_path = path::get_relative_path(path.as_path());
                     format!("{} ({})", &self.name, get_relative_path.to_string_lossy()).into()
                 }
                 Err(_) => format!("{} ({})", &self.name, &self.location.uri).into(),
+            };
+            if let Some(icon) = icon {
+                Row::new([Span::from(icon), symbol_span])
+            } else {
+                Row::from(symbol_span)
             }
         }
     }
@@ -121,7 +161,18 @@ struct PickerDiagnostic {
 impl ui::menu::Item for PickerDiagnostic {
     type Data = (DiagnosticStyles, DiagnosticsFormat);
 
-    fn format(&self, (styles, format): &Self::Data) -> Row {
+    fn format<'a>(&self, (styles, format): &Self::Data, icons: Option<&'a Icons>) -> Row {
+        let icon: Option<&'a Icon> =
+            icons
+                .zip(self.diag.severity)
+                .map(|(icons, severity)| match severity {
+                    DiagnosticSeverity::ERROR => &icons.diagnostic.error,
+                    DiagnosticSeverity::WARNING => &icons.diagnostic.warning,
+                    DiagnosticSeverity::HINT => &icons.diagnostic.hint,
+                    DiagnosticSeverity::INFORMATION => &icons.diagnostic.info,
+                    _ => &icons::BLANK_ICON,
+                });
+
         let mut style = self
             .diag
             .severity
@@ -152,12 +203,20 @@ impl ui::menu::Item for PickerDiagnostic {
             }
         };
 
-        Spans::from(vec![
-            Span::raw(path),
-            Span::styled(&self.diag.message, style),
-            Span::styled(code, style),
-        ])
-        .into()
+        if let Some(icon) = icon {
+            Row::new(vec![
+                icon.into(),
+                Span::raw(path),
+                Span::styled(&self.diag.message, style),
+                Span::styled(code, style),
+            ])
+        } else {
+            Row::new(vec![
+                Span::raw(path),
+                Span::styled(&self.diag.message, style),
+                Span::styled(code, style),
+            ])
+        }
     }
 }
 
@@ -213,11 +272,13 @@ fn sym_picker(
     symbols: Vec<lsp::SymbolInformation>,
     current_path: Option<lsp::Url>,
     offset_encoding: OffsetEncoding,
+    editor: &Editor,
 ) -> FilePicker<lsp::SymbolInformation> {
     // TODO: drop current_path comparison and instead use workspace: bool flag?
     FilePicker::new(
         symbols,
         current_path.clone(),
+        editor.config().icons.picker.then_some(&editor.icons),
         move |cx, symbol, action| {
             let (view, doc) = current!(cx.editor);
             push_jump(view, doc);
@@ -293,6 +354,7 @@ fn diag_picker(
     FilePicker::new(
         flat_diag,
         (styles, format),
+        cx.editor.config().icons.picker.then_some(&cx.editor.icons),
         move |cx, PickerDiagnostic { url, diag }, action| {
             if current_path.as_ref() == Some(url) {
                 let (view, doc) = current!(cx.editor);
@@ -371,8 +433,8 @@ pub fn symbol_picker(cx: &mut Context) {
                     }
                 };
 
-                let picker = sym_picker(symbols, current_url, offset_encoding);
-                compositor.push(Box::new(overlayed(picker)))
+                let picker = sym_picker(symbols, current_url, offset_encoding, editor);
+                compositor.push(Box::new(overlaid(picker)))
             }
         },
     )
@@ -394,9 +456,9 @@ pub fn workspace_symbol_picker(cx: &mut Context) {
 
     cx.callback(
         future,
-        move |_editor, compositor, response: Option<Vec<lsp::SymbolInformation>>| {
+        move |editor, compositor, response: Option<Vec<lsp::SymbolInformation>>| {
             let symbols = response.unwrap_or_default();
-            let picker = sym_picker(symbols, current_url, offset_encoding);
+            let picker = sym_picker(symbols, current_url, offset_encoding, editor);
             let get_symbols = |query: String, editor: &mut Editor| {
                 let doc = doc!(editor);
                 let language_server = match doc.language_server() {
@@ -431,7 +493,7 @@ pub fn workspace_symbol_picker(cx: &mut Context) {
                 future.boxed()
             };
             let dyn_picker = DynamicPicker::new(picker, Box::new(get_symbols));
-            compositor.push(Box::new(overlayed(dyn_picker)))
+            compositor.push(Box::new(overlaid(dyn_picker)))
         },
     )
 }
@@ -454,7 +516,7 @@ pub fn diagnostics_picker(cx: &mut Context) {
             DiagnosticsFormat::HideSourcePath,
             offset_encoding,
         );
-        cx.push_layer(Box::new(overlayed(picker)));
+        cx.push_layer(Box::new(overlaid(picker)));
     }
 }
 
@@ -471,12 +533,12 @@ pub fn workspace_diagnostics_picker(cx: &mut Context) {
         DiagnosticsFormat::ShowSourcePath,
         offset_encoding,
     );
-    cx.push_layer(Box::new(overlayed(picker)));
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 impl ui::menu::Item for lsp::CodeActionOrCommand {
     type Data = ();
-    fn format(&self, _data: &Self::Data) -> Row {
+    fn format<'a>(&self, _data: &Self::Data, _icons: Option<&'a Icons>) -> Row {
         match self {
             lsp::CodeActionOrCommand::CodeAction(action) => action.title.as_str().into(),
             lsp::CodeActionOrCommand::Command(command) => command.title.as_str().into(),
@@ -491,7 +553,7 @@ impl ui::menu::Item for lsp::CodeActionOrCommand {
 ///
 /// While the `kind` field is defined as open ended in the LSP spec (any value may be used)
 /// in practice a closed set of common values (mostly suggested in the LSP spec) are used.
-/// VSCode displays each of these categories seperatly (seperated by a heading in the codeactions picker)
+/// VSCode displays each of these categories separately (separated by a heading in the codeactions picker)
 /// to make them easier to navigate. Helix does not display these  headings to the user.
 /// However it does sort code actions by their categories to achieve the same order as the VScode picker,
 /// just without the headings.
@@ -521,7 +583,7 @@ fn action_category(action: &CodeActionOrCommand) -> u32 {
     }
 }
 
-fn action_prefered(action: &CodeActionOrCommand) -> bool {
+fn action_preferred(action: &CodeActionOrCommand) -> bool {
     matches!(
         action,
         CodeActionOrCommand::CodeAction(CodeAction {
@@ -600,12 +662,12 @@ pub fn code_action(cx: &mut Context) {
             }
 
             // Sort codeactions into a useful order. This behaviour is only partially described in the LSP spec.
-            // Many details are modeled after vscode because langauge servers are usually tested against it.
+            // Many details are modeled after vscode because language servers are usually tested against it.
             // VScode sorts the codeaction two times:
             //
             // First the codeactions that fix some diagnostics are moved to the front.
             // If both codeactions fix some diagnostics (or both fix none) the codeaction
-            // that is marked with `is_preffered` is shown first. The codeactions are then shown in seperate
+            // that is marked with `is_preferred` is shown first. The codeactions are then shown in separate
             // submenus that only contain a certain category (see `action_category`) of actions.
             //
             // Below this done in in a single sorting step
@@ -627,10 +689,10 @@ pub fn code_action(cx: &mut Context) {
                     return order;
                 }
 
-                // if one of the codeactions is marked as prefered show it first
+                // if one of the codeactions is marked as preferred show it first
                 // otherwise keep the original LSP sorting
-                action_prefered(action1)
-                    .cmp(&action_prefered(action2))
+                action_preferred(action1)
+                    .cmp(&action_preferred(action2))
                     .reverse()
             });
 
@@ -672,7 +734,7 @@ pub fn code_action(cx: &mut Context) {
 
 impl ui::menu::Item for lsp::Command {
     type Data = ();
-    fn format(&self, _data: &Self::Data) -> Row {
+    fn format<'a>(&self, _data: &Self::Data, _icons: Option<&'a Icons>) -> Row {
         self.title.as_str().into()
     }
 }
@@ -950,12 +1012,13 @@ fn goto_impl(
             let picker = FilePicker::new(
                 locations,
                 cwdir,
+                None,
                 move |cx, location, action| {
                     jump_to_location(cx.editor, location, offset_encoding, action)
                 },
                 move |_editor, location| Some(location_to_file_location(location)),
             );
-            compositor.push(Box::new(overlayed(picker)));
+            compositor.push(Box::new(overlaid(picker)));
         }
     }
 }

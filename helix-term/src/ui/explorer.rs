@@ -1,10 +1,11 @@
-use super::{Prompt, TreeOp, TreeView, TreeViewItem};
+use super::{tree::TreeIcons, Prompt, TreeOp, TreeView, TreeViewItem};
 use crate::{
     compositor::{Component, Context, EventResult},
     ctrl, key, shift, ui,
 };
 use anyhow::{bail, ensure, Result};
 use helix_core::Position;
+
 use helix_view::{
     editor::{Action, ExplorerPosition},
     graphics::{CursorKind, Rect},
@@ -13,9 +14,9 @@ use helix_view::{
     theme::Modifier,
     Editor,
 };
-use std::cmp::Ordering;
 use std::path::{Path, PathBuf};
 use std::{borrow::Cow, fs::DirEntry};
+use std::{cmp::Ordering, sync::Arc};
 use tui::{
     buffer::Buffer as Surface,
     widgets::{Block, Borders, Widget},
@@ -172,7 +173,7 @@ impl Explorer {
             .unwrap_or_else(|_| "./".into())
             .canonicalize()?;
         Ok(Self {
-            tree: Self::new_tree_view(current_root.clone())?,
+            tree: Self::new_tree_view(current_root.clone(), Self::get_tree_icons(cx))?,
             history: vec![],
             show_help: false,
             state: State::new(true, current_root),
@@ -182,10 +183,44 @@ impl Explorer {
         })
     }
 
+    fn get_tree_icons(cx: &Context) -> TreeIcons {
+        let icons = cx.editor.icons.clone();
+        let defaults = TreeIcons::default();
+
+        let file_icon = icons
+            .ui
+            .as_ref()
+            .and_then(|s| s.get("file").cloned())
+            .unwrap_or(defaults.item);
+        let item = file_icon.clone();
+        let tree_closed = icons
+            .ui
+            .as_ref()
+            .and_then(|s| s.get("folder").cloned())
+            .unwrap_or(defaults.tree_closed);
+        let tree_opened = icons
+            .ui
+            .as_ref()
+            .and_then(|s| s.get("folder_opened").cloned())
+            .unwrap_or(defaults.tree_opened);
+
+        TreeIcons {
+            tree_closed,
+            tree_opened,
+            item,
+            icon_fn: Some(Arc::new(move |item| {
+                icons
+                    .icon_from_path(Some(&PathBuf::from(item)))
+                    .cloned()
+                    .unwrap_or_else(|| file_icon.to_owned())
+            })),
+        }
+    }
+
     #[cfg(test)]
     fn from_path(root: PathBuf, column_width: u16) -> Result<Self> {
         Ok(Self {
-            tree: Self::new_tree_view(root.clone())?,
+            tree: Self::new_tree_view(root.clone(), TreeIcons::default())?,
             history: vec![],
             show_help: false,
             state: State::new(true, root),
@@ -195,9 +230,11 @@ impl Explorer {
         })
     }
 
-    fn new_tree_view(root: PathBuf) -> Result<TreeView<FileInfo>> {
+    fn new_tree_view(root: PathBuf, icons: TreeIcons) -> Result<TreeView<FileInfo>> {
         let root = FileInfo::root(root);
-        Ok(TreeView::build_tree(root)?.with_enter_fn(Self::toggle_current))
+        Ok(TreeView::build_tree(root)?
+            .with_enter_fn(Self::toggle_current)
+            .icons(icons))
     }
 
     fn push_history(&mut self, tree_view: TreeView<FileInfo>, current_root: PathBuf) {
@@ -213,7 +250,7 @@ impl Explorer {
         if self.state.current_root.eq(&root) {
             return Ok(());
         }
-        let tree = Self::new_tree_view(root.clone())?;
+        let tree = Self::new_tree_view(root.clone(), self.tree.icons.clone())?;
         let old_tree = std::mem::replace(&mut self.tree, tree);
         self.push_history(old_tree, self.state.current_root.clone());
         self.state.current_root = root;

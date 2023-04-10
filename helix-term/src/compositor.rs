@@ -61,13 +61,14 @@ impl<'a> Context<'a> {
         use crate::config::Config;
         use arc_swap::{access::Map, ArcSwap};
         use helix_core::syntax::{self, Configuration};
-        use helix_view::theme;
+        use helix_view::{icons, theme};
         use std::sync::Arc;
 
         let config = Arc::new(ArcSwap::from_pointee(Config::default()));
         Editor::new(
             Rect::new(0, 0, 60, 120),
             Arc::new(theme::Loader::new(&[])),
+            Arc::new(icons::Loader::new(&[])),
             Arc::new(syntax::Loader::new(Configuration { language: vec![] })),
             Arc::new(Arc::new(Map::new(
                 Arc::clone(&config),
