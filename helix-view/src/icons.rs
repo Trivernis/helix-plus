@@ -54,6 +54,13 @@ impl Icon {
             self.style = Some(IconStyle::Default(style));
         }
     }
+
+    pub fn unstyled(icon_char: char) -> Self {
+        Self {
+            icon_char,
+            style: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]

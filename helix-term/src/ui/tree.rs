@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, sync::Arc};
 
 use anyhow::Result;
-use helix_view::theme::Modifier;
+use helix_view::{icons::Icon, theme::Modifier};
 
 use crate::{
     compositor::{Component, Context, EventResult},
@@ -782,6 +782,7 @@ struct RenderedLine {
     content: String,
     selected: bool,
     is_ancestor_of_current_item: bool,
+    icon: Icon,
 }
 struct RenderTreeParams<'a, T> {
     tree: &'a Tree<T>,
@@ -793,18 +794,18 @@ struct RenderTreeParams<'a, T> {
 
 #[derive(Clone)]
 pub struct TreeIcons {
-    pub tree_closed: String,
-    pub tree_opened: String,
-    pub item: String,
-    pub icon_fn: Option<Arc<dyn Fn(&str) -> String>>,
+    pub tree_closed: Icon,
+    pub tree_opened: Icon,
+    pub item: Icon,
+    pub icon_fn: Option<Arc<dyn Fn(&str) -> Icon>>,
 }
 
 impl Default for TreeIcons {
     fn default() -> Self {
         Self {
-            tree_closed: String::from("⏵"),
-            tree_opened: String::from("⏷"),
-            item: String::from(" "),
+            tree_closed: Icon::unstyled('⏵'),
+            tree_opened: Icon::unstyled('⏷'),
+            item: Icon::unstyled(' '),
             icon_fn: None,
         }
     }
@@ -821,33 +822,31 @@ fn render_tree<T: TreeViewItem>(
 ) -> Vec<RenderedLine> {
     let name = tree.item.name();
 
-    let indent = if level > 0 {
-        let indicator = if tree.item().is_parent() {
-            if tree.is_opened {
-                icons.tree_opened.to_owned()
-            } else {
-                icons.tree_closed.to_owned()
-            }
+    let icon = if tree.item().is_parent() {
+        if tree.is_opened {
+            icons.tree_opened.to_owned()
         } else {
-            if let Some(icon_fn) = icons.icon_fn.as_ref() {
-                icon_fn(&name)
-            } else {
-                icons.item.to_owned()
-            }
-        };
-        format!("{}{} ", prefix, indicator)
+            icons.tree_closed.to_owned()
+        }
     } else {
         if let Some(icon_fn) = icons.icon_fn.as_ref() {
             icon_fn(&name)
         } else {
-            icons.item.clone()
+            icons.item.to_owned()
         }
+    };
+
+    let indent = if level > 0 {
+        format!("{} ", prefix)
+    } else {
+        String::new()
     };
     let head = RenderedLine {
         indent,
         selected: selected == tree.index,
         is_ancestor_of_current_item: selected != tree.index && tree.get(selected).is_some(),
         content: name,
+        icon,
     };
     let prefix = format!("{}{}", prefix, if level == 0 { "" } else { "  " });
     vec![head]
@@ -899,12 +898,20 @@ impl<T: TreeViewItem + Clone> TreeView<T> {
                 style,
             );
 
+            let x = area.x.saturating_add(indent_len);
+            surface.set_stringn(
+                x,
+                area.y,
+                line.icon.icon_char.to_string(),
+                2,
+                line.icon.style.map(|s| s.into()).unwrap_or(style),
+            );
             let style = if line.selected {
                 style.add_modifier(Modifier::REVERSED)
             } else {
                 style
             };
-            let x = area.x.saturating_add(indent_len);
+            let x = x.saturating_add(2);
             surface.set_stringn(
                 x,
                 area.y,

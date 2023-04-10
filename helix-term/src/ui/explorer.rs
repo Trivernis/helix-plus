@@ -191,20 +191,17 @@ impl Explorer {
             .ui
             .as_ref()
             .and_then(|s| s.get("file").cloned())
-            .map(|i| i.icon_char.to_string())
             .unwrap_or(defaults.item);
         let item = file_icon.clone();
         let tree_closed = icons
             .ui
             .as_ref()
             .and_then(|s| s.get("folder").cloned())
-            .map(|i| i.icon_char.to_string())
             .unwrap_or(defaults.tree_closed);
         let tree_opened = icons
             .ui
             .as_ref()
             .and_then(|s| s.get("folder_opened").cloned())
-            .map(|i| i.icon_char.to_string())
             .unwrap_or(defaults.tree_opened);
 
         TreeIcons {
@@ -212,14 +209,10 @@ impl Explorer {
             tree_opened,
             item,
             icon_fn: Some(Arc::new(move |item| {
-                if let Some(file_type) = PathBuf::from(item).extension() {
-                    icons
-                        .icon_from_filetype(&file_type.to_string_lossy())
-                        .map(|i| i.icon_char.to_string())
-                        .unwrap_or_else(|| file_icon.to_owned())
-                } else {
-                    file_icon.to_owned()
-                }
+                icons
+                    .icon_from_path(Some(&PathBuf::from(item)))
+                    .cloned()
+                    .unwrap_or_else(|| file_icon.to_owned())
             })),
         }
     }
