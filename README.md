@@ -4,7 +4,7 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="logo_dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="logo_light.svg">
-  <img alt="Helix" height="128" src="logo_light.svg">
+  <img alt="Helix" height="128" src="logo_dark.svg">
 </picture>
 </h1>
 
@@ -18,7 +18,7 @@
 
 ![Screenshot](./screenshot.png)
 
-A Kakoune / Neovim inspired editor, written in Rust.
+This is a fork of helix, a Kakoune / Neovim inspired editor, written in Rust.
 
 The editing model is very heavily based on Kakoune; during development I found
 myself agreeing with most of Kakoune's design decisions.
@@ -42,6 +42,16 @@ It's a terminal-based editor first, but I'd like to explore a custom renderer
 
 Note: Only certain languages have indentation definitions at the moment. Check
 `runtime/queries/<lang>/` for `indents.scm`.
+
+# Additional Features of helix-plus
+
+- [File Explorer](https://github.com/helix-editor/helix/pull/5768)
+  - Added automatic update of the current file in the tree view
+  - Added icon support
+  - Added `--show-explorer` CLI flag to show the explorer when opening helix
+- [Icons](https://github.com/helix-editor/helix/pull/2869)
+- `rm` command to delete the file associated with the current buffer
+- `dracula-purple` theme which is a combination of `dracula` and `boo_berry`
 
 # Installation
 
