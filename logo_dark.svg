@@ -54,8 +54,8 @@
    inkscape:deskcolor="#d1d1d1"
    showgrid="false"
    inkscape:zoom="0.40176966"
-   inkscape:cx="802.69874"
-   inkscape:cy="772.83088"
+   inkscape:cx="801.45425"
+   inkscape:cy="775.31987"
    inkscape:window-width="1908"
    inkscape:window-height="996"
    inkscape:window-x="4"
@@ -122,4 +122,14 @@
      id="tspan184"
      x="798.0365"
      y="973.64172"
-     style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:742.268px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';fill:#8ff8b6;fill-opacity:1;stroke:#8ff8b6;stroke-width:20;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;paint-order:normal">+</tspan></text></svg>
+     style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:742.268px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';fill:#8ff8b6;fill-opacity:1;stroke:#8ff8b6;stroke-width:20;stroke-linecap:square;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;paint-order:normal">+</tspan></text><text
+   xml:space="preserve"
+   style="font-weight:bold;font-size:200px;font-family:sans-serif;-inkscape-font-specification:'sans-serif Bold';clip-rule:evenodd;fill:#8ff8b6;fill-opacity:1;fill-rule:evenodd;stroke:#fe92c5;stroke-width:20;stroke-linecap:square;stroke-linejoin:round;stroke-miterlimit:2"
+   x="2269.8679"
+   y="884.69611"
+   id="text416"><tspan
+     sodipodi:role="line"
+     id="tspan414"
+     x="2269.8679"
+     y="884.69611"
+     style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:200px;font-family:'FiraCode Nerd Font';-inkscape-font-specification:'FiraCode Nerd Font Bold';fill:#8ff8b6;fill-opacity:1;stroke:none">plus</tspan></text></svg>
