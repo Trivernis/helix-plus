@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, sync::Arc};
 
 use anyhow::Result;
 use helix_view::theme::Modifier;
@@ -290,6 +290,7 @@ pub struct TreeView<T: TreeViewItem> {
     max_len: usize,
     count: usize,
     tree_symbol_style: String,
+    pub icons: TreeIcons,
 
     #[allow(clippy::type_complexity)]
     pre_render: Option<Box<dyn Fn(&mut Self, Rect) + 'static>>,
@@ -325,6 +326,7 @@ impl<T: TreeViewItem> TreeView<T> {
             on_next_key: None,
             search_prompt: None,
             search_str: "".into(),
+            icons: TreeIcons::default(),
         })
     }
 
@@ -346,6 +348,11 @@ impl<T: TreeViewItem> TreeView<T> {
 
     pub fn tree_symbol_style(mut self, style: String) -> Self {
         self.tree_symbol_style = style;
+        self
+    }
+
+    pub fn icons(mut self, icons: TreeIcons) -> Self {
+        self.icons = icons;
         self
     }
 
@@ -781,6 +788,26 @@ struct RenderTreeParams<'a, T> {
     prefix: &'a String,
     level: usize,
     selected: usize,
+    icons: &'a TreeIcons,
+}
+
+#[derive(Clone)]
+pub struct TreeIcons {
+    pub tree_closed: String,
+    pub tree_opened: String,
+    pub item: String,
+    pub icon_fn: Option<Arc<dyn Fn(&str) -> String>>,
+}
+
+impl Default for TreeIcons {
+    fn default() -> Self {
+        Self {
+            tree_closed: String::from("⏵"),
+            tree_opened: String::from("⏷"),
+            item: String::from(" "),
+            icon_fn: None,
+        }
+    }
 }
 
 fn render_tree<T: TreeViewItem>(
@@ -789,23 +816,33 @@ fn render_tree<T: TreeViewItem>(
         prefix,
         level,
         selected,
+        icons,
     }: RenderTreeParams<T>,
 ) -> Vec<RenderedLine> {
+    let name = tree.item.name();
+
     let indent = if level > 0 {
         let indicator = if tree.item().is_parent() {
             if tree.is_opened {
-                "⏷"
+                icons.tree_opened.to_owned()
             } else {
-                "⏵"
+                icons.tree_closed.to_owned()
             }
         } else {
-            " "
+            if let Some(icon_fn) = icons.icon_fn.as_ref() {
+                icon_fn(&name)
+            } else {
+                icons.item.to_owned()
+            }
         };
         format!("{}{} ", prefix, indicator)
     } else {
-        "".to_string()
+        if let Some(icon_fn) = icons.icon_fn.as_ref() {
+            icon_fn(&name)
+        } else {
+            icons.item.clone()
+        }
     };
-    let name = tree.item.name();
     let head = RenderedLine {
         indent,
         selected: selected == tree.index,
@@ -821,6 +858,7 @@ fn render_tree<T: TreeViewItem>(
                 prefix: &prefix,
                 level: level + 1,
                 selected,
+                icons,
             })
         }))
         .collect()
@@ -915,6 +953,7 @@ impl<T: TreeViewItem + Clone> TreeView<T> {
             prefix: &"".to_string(),
             level: 0,
             selected: self.selected,
+            icons: &self.icons,
         };
 
         let lines = render_tree(params);
