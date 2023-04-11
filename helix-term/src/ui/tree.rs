@@ -918,7 +918,7 @@ impl<T: TreeViewItem + Clone> TreeView<T> {
                 line.content.clone(),
                 area.width
                     .saturating_sub(indent_len)
-                    .saturating_sub(1)
+                    .saturating_sub(3)
                     .into(),
                 if line.is_ancestor_of_current_item {
                     ancestor_style
