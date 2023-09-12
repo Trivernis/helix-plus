@@ -728,6 +728,21 @@ impl Document {
         }
     }
 
+    /// Deletes the file associated with this document
+    pub fn delete(&mut self) -> impl Future<Output = Result<(), anyhow::Error>> {
+        let path = self
+            .path()
+            .expect("Cannot delete with no path set!")
+            .clone();
+
+        async move {
+            use tokio::fs;
+            fs::remove_file(path).await?;
+
+            Ok(())
+        }
+    }
+
     /// If supported, returns the changes that should be applied to this document in order
     /// to format it nicely.
     // We can't use anyhow::Result here since the output of the future has to be
