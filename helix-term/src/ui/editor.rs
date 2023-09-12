@@ -1533,12 +1533,32 @@ impl Component for EditorView {
 
         if let Some(explore) = self.explorer.as_mut() {
             if explore.is_focus() {
-                let area = if use_bufferline {
-                    area.clip_top(1)
-                } else {
-                    area
+                let needs_update = explore.is_focus() || {
+                    if let Some(current_document_path) = doc!(cx.editor).path().cloned() {
+                        if let Some(current_explore_path) = explore.current_file() {
+                            if *current_explore_path != current_document_path {
+                                let _ = explore.reveal_file(current_document_path);
+
+                                true
+                            } else {
+                                false
+                            }
+                        } else {
+                            let _ = explore.reveal_file(current_document_path);
+                            true
+                        }
+                    } else {
+                        false
+                    }
                 };
-                explore.render(area, surface, cx);
+                if needs_update {
+                    let area = if use_bufferline {
+                        area.clip_top(1)
+                    } else {
+                        area
+                    };
+                    explore.render(area, surface, cx);
+                }
             }
         }
     }

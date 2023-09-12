@@ -266,7 +266,7 @@ impl Explorer {
         self.state.open = true;
     }
 
-    fn unfocus(&mut self) {
+    pub fn unfocus(&mut self) {
         self.state.focus = false;
     }
 
@@ -603,6 +603,11 @@ impl Explorer {
         } else {
             Ok(())
         }
+    }
+
+    /// Returns the current file in the tree view
+    pub fn current_file(&self) -> Option<&PathBuf> {
+        self.tree.current_item().ok().map(|c| &c.path)
     }
 
     pub fn is_opened(&self) -> bool {

@@ -25,11 +25,11 @@ use tui::backend::Backend;
 use crate::{
     args::Args,
     commands::apply_workspace_edit,
-    compositor::{Compositor, Event},
+    compositor::{self, Compositor, Event},
     config::Config,
     job::Jobs,
     keymap::Keymaps,
-    ui::{self, overlay::overlaid},
+    ui::{self, overlay::overlaid, Explorer},
 };
 
 use log::{debug, error, warn};
@@ -153,7 +153,21 @@ impl Application {
         let keys = Box::new(Map::new(Arc::clone(&config), |config: &Config| {
             &config.keys
         }));
-        let editor_view = Box::new(ui::EditorView::new(Keymaps::new(keys)));
+        let mut editor_view = Box::new(ui::EditorView::new(Keymaps::new(keys)));
+
+        let mut jobs = Jobs::new();
+
+        if args.show_explorer {
+            let mut context = compositor::Context {
+                editor: &mut editor,
+                scroll: None,
+                jobs: &mut jobs,
+            };
+            let mut explorer = Explorer::new(&mut context)?;
+            explorer.unfocus();
+            editor_view.explorer = Some(explorer);
+        }
+
         compositor.push(editor_view);
 
         if args.load_tutor {
@@ -243,7 +257,7 @@ impl Application {
             syn_loader,
 
             signals,
-            jobs: Jobs::new(),
+            jobs,
             lsp_progress: LspProgressMap::new(),
         };
 
