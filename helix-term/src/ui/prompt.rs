@@ -112,6 +112,11 @@ impl Prompt {
         self.completion = (self.completion_fn)(editor, &self.line);
     }
 
+    #[cfg(test)]
+    pub fn prompt(&self) -> &Cow<str> {
+        &self.prompt
+    }
+
     /// Compute the cursor position after applying movement
     /// Taken from: <https://github.com/wez/wezterm/blob/e0b62d07ca9bf8ce69a61e30a3c20e7abc48ce7e/termwiz/src/lineedit/mod.rs#L516-L611>
     fn eval_movement(&self, movement: Movement) -> usize {
