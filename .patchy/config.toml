@@ -1,0 +1,6 @@
+
+repo = "helix-editor/helix"
+remote-branch = "master"
+local-branch = "patchy"
+
+pull-requests = ["12369", "13133", "7215", "11497"]
